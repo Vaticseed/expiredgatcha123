@@ -295,11 +295,8 @@
     color:var(--text);
     direction:ltr;
     unicode-bidi:isolate;
-    text-decoration:none;
     display:inline-block;
-    transition:color .15s;
   }
-  .tag:hover{color:var(--cyan);text-decoration:underline;}
   .tag .hash{color:var(--accent);}
   .badge{
     font-family:'JetBrains Mono',monospace;
@@ -310,6 +307,8 @@
     color:var(--text-dim);
   }
   .badge.verified-badge{color:#4ade80;border-color:#4ade80;}
+  .badge.pending-badge{color:#facc15;border-color:#facc15;}
+  .entry.pending{border-color:rgba(250,204,21,0.35);}
   .reason{color:var(--text-muted);font-size:13.5px;margin-top:8px;line-height:1.5;}
   .meta-row{
     display:flex;justify-content:space-between;align-items:center;
@@ -317,9 +316,22 @@
     font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);
   }
   .meta-actions{display:flex;gap:14px;align-items:center;}
-  .profile-links{display:flex;gap:14px;align-items:center;}
-  .profile-links a{color:var(--text-dim);text-decoration:none;transition:color .15s;}
-  .profile-links a:hover{color:var(--cyan);text-decoration:underline;}
+  .profile-links{display:flex;gap:8px;align-items:center;}
+  .profile-links a{
+    display:inline-flex;
+    align-items:center;
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:0.03em;
+    color:var(--cyan);
+    background:rgba(62,219,211,0.1);
+    border:1px solid rgba(62,219,211,0.4);
+    padding:5px 10px;
+    border-radius:var(--radius);
+    text-decoration:none;
+    transition:background .15s, transform .1s;
+  }
+  .profile-links a:hover{background:rgba(62,219,211,0.22);transform:translateY(-1px);}
   .meta-actions span{cursor:pointer;transition:color .15s;}
   .meta-actions span:hover{color:var(--accent);}
   .rank-tag{
@@ -454,7 +466,7 @@
   </div>
 
   <div class="add-panel" id="add-panel">
-    <h3>// File a report</h3>
+    <h3 id="add-panel-title">// File a report</h3>
     <div class="grid2">
       <div>
         <label class="field-label">Username</label>
@@ -467,12 +479,14 @@
     </div>
     <label class="field-label">Reason (optional)</label>
     <textarea id="in-reason" placeholder="What happened? Be specific, this is what other players will see."></textarea>
-    <div style="height:10px;"></div>
-    <label class="field-label">List</label>
-    <select id="in-type">
-      <option value="dodge">Dodge List</option>
-      <option value="cheater">Cheaters</option>
-    </select>
+    <div id="type-field-wrap">
+      <div style="height:10px;"></div>
+      <label class="field-label">List</label>
+      <select id="in-type">
+        <option value="dodge">Dodge List</option>
+        <option value="cheater">Cheaters</option>
+      </select>
+    </div>
     <div class="form-actions">
       <button class="btn-ghost" id="cancel-add">Cancel</button>
       <button class="btn-primary" id="submit-add">Submit Report</button>
@@ -537,7 +551,7 @@ if (FIREBASE_CONFIG) {
       document.getElementById('admin-logged-in').style.display = isAdmin ? 'block' : 'none';
       document.getElementById('admin-btn-label').textContent = isAdmin ? 'Admin ✓' : 'Admin';
       document.getElementById('admin-toggle-btn').classList.toggle('is-admin', isAdmin);
-      document.getElementById('toggle-add').style.display = isAdmin ? 'inline-flex' : 'none';
+      updateAddAccess();
       if (!isAdmin) document.getElementById('add-panel').classList.remove('open');
       render();
     });
@@ -562,6 +576,13 @@ adminDiscordRow.innerHTML = ADMIN_DISCORDS.map(name => `<span class="discord-pil
 
 let entries = [];
 let activeTab = 'cheater';
+
+function updateAddAccess(){
+  const canAdd = isAdmin || activeTab === 'cheater';
+  document.getElementById('toggle-add').style.display = canAdd ? 'inline-flex' : 'none';
+  document.getElementById('type-field-wrap').style.display = isAdmin ? 'block' : 'none';
+  document.getElementById('add-panel-title').textContent = isAdmin ? '// File a report' : '// Report a cheater (unverified until an admin checks it)';
+}
 
 function render(){
   const listEl = document.getElementById('list');
@@ -593,10 +614,10 @@ function render(){
 
   filtered.forEach(e => {
     const card = document.createElement('div');
-    card.className = 'entry';
+    card.className = 'entry' + (!e.verified ? ' pending' : '');
     const badge = e.verified
       ? '<span class="badge verified-badge">Verified</span>'
-      : '';
+      : '<span class="badge pending-badge">Unverified</span>';
 
     let rankIconHtml = '';
     let rankAction = '';
@@ -612,7 +633,8 @@ function render(){
     }
 
     const trackerUrl = `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(`${e.username}#${e.tag}`)}/overview`;
-    const vtlUrl = `https://vtl.lol/${encodeURIComponent(e.username)}_${encodeURIComponent(e.tag)}`;
+    const vtlName = encodeURIComponent(e.username).replace(/%20/g, '+');
+    const vtlUrl = `https://vtl.lol/id/${vtlName}_${encodeURIComponent(e.tag)}`;
 
     card.innerHTML = `
       <div class="entry-top">
@@ -630,6 +652,7 @@ function render(){
         </span>
         <span class="meta-actions">
           ${rankAction}
+          ${isAdmin && !e.verified ? `<span data-action="verify" data-id="${e.id}" style="color:#4ade80;">Verify</span>` : ''}
           ${isAdmin ? `<span data-action="delete" data-id="${e.id}" style="color:var(--accent);">Delete</span>` : ''}
         </span>
       </div>
@@ -643,6 +666,9 @@ function render(){
   listEl.querySelectorAll('[data-action="check-rank"]').forEach(el=>{
     el.addEventListener('click', ()=> checkRank(el.getAttribute('data-id')));
   });
+  listEl.querySelectorAll('[data-action="verify"]').forEach(el=>{
+    el.addEventListener('click', ()=> verifyEntry(el.getAttribute('data-id')));
+  });
 }
 
 function escapeHtml(str){
@@ -653,7 +679,7 @@ function escapeHtml(str){
 
 async function addEntry(entry){
   entry.createdAt = Date.now();
-  entry.verified = true;
+  entry.verified = !!entry.verified;
   if (useFirebase) {
     const ref = await addDoc(collection(db, 'entries'), entry);
     return ref.id;
@@ -672,6 +698,18 @@ async function deleteEntry(id){
     await deleteDoc(doc(db, 'entries', id));
   } else {
     entries = entries.filter(e => e.id !== id);
+    saveLocal(entries);
+    render();
+  }
+}
+
+async function verifyEntry(id){
+  if (!isAdmin) return;
+  if (useFirebase) {
+    await updateDoc(doc(db, 'entries', id), { verified: true });
+  } else {
+    const target = entries.find(e => e.id === id);
+    if (target) target.verified = true;
     saveLocal(entries);
     render();
   }
@@ -737,6 +775,7 @@ if (useFirebase) {
   entries = loadLocal();
   render();
 }
+updateAddAccess();
 
 /* ---- UI wiring ---- */
 document.getElementById('search').addEventListener('input', render);
@@ -747,6 +786,8 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
     const typeSelect = document.getElementById('in-type');
     if (typeSelect) typeSelect.value = activeTab;
+    updateAddAccess();
+    if (!isAdmin && activeTab !== 'cheater') document.getElementById('add-panel').classList.remove('open');
     render();
   });
 });
@@ -775,12 +816,12 @@ document.getElementById('submit-add').addEventListener('click', async ()=>{
   const username = document.getElementById('in-username').value.trim();
   const tag = document.getElementById('in-tag').value.trim().replace(/^#/,'');
   const reason = document.getElementById('in-reason').value.trim();
-  const type = document.getElementById('in-type').value;
+  const type = isAdmin ? document.getElementById('in-type').value : 'cheater';
 
   if (!username || !tag) { alert('Username and tag are required.'); return; }
 
-  const newId = await addEntry({ username, tag, reason, type });
-  if (HENRIK_API_KEY && newId) {
+  const newId = await addEntry({ username, tag, reason, type, verified: isAdmin });
+  if (isAdmin && HENRIK_API_KEY && newId) {
     checkRankFor(newId, username, tag).catch(e => {
       console.warn('Auto rank check failed for new entry:', e.message);
     });
@@ -790,6 +831,7 @@ document.getElementById('submit-add').addEventListener('click', async ()=>{
   document.getElementById('in-tag').value = '';
   document.getElementById('in-reason').value = '';
   addPanel.classList.remove('open');
+  if (!isAdmin) alert('Thanks, your report was submitted. An admin will review and verify it.');
 });
 
 
