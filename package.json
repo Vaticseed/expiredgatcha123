@@ -1,0 +1,13 @@
+{
+  "name": "dodge-list-rank-updater",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Scheduled script that refreshes cached Valorant ranks for the dodge list.",
+  "scripts": {
+    "update-ranks": "node scripts/update-ranks.mjs"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.1.0"
+  }
+}
