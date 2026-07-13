@@ -136,10 +136,13 @@
     border:1px solid rgba(88,101,242,0.5);
     color:var(--text);
     font-family:'JetBrains Mono',monospace;
-    font-weight:500;
+    font-weight:600;
     font-size:13px;
-    padding:8px 14px;
+    padding:10px 16px;
     border-radius:var(--radius);
+    text-decoration:none;
+    cursor:pointer;
+    white-space:nowrap;
     transition:background .15s, transform .1s;
   }
   .discord-pill:hover{background:rgba(88,101,242,0.26);transform:translateY(-1px);}
@@ -405,9 +408,9 @@
       </div>
       <div class="contact-text">
         <p class="contact-title">Want someone added or removed?</p>
-        <p class="contact-sub">Message an admin on Discord and they'll review the request.</p>
+        <p class="contact-sub">Open a ticket in our Discord server and an admin will get to you.</p>
       </div>
-      <div class="admin-discord-row" id="admin-discord-row"></div>
+      <a class="discord-pill" href="https://dodgelist.me/discord/" target="_blank" rel="noopener noreferrer">Open a ticket</a>
     </div>
     <div class="stat-row">
       <div><div class="stat-num" id="stat-total">0</div><div class="stat-label">Entries</div></div>
@@ -511,16 +514,6 @@ if (FIREBASE_CONFIG) {
 const LOCAL_KEY = 'dodge-list-entries';
 function loadLocal(){ try{ return JSON.parse(localStorage.getItem(LOCAL_KEY)) || []; }catch{ return []; } }
 function saveLocal(entries){ localStorage.setItem(LOCAL_KEY, JSON.stringify(entries)); }
-
-/* ============================================================
-   ADMIN DISCORD USERNAMES
-   Edit this list to add/remove who shows up as an admin to
-   contact. Just add or remove names in the array below.
-   ============================================================ */
-const ADMIN_DISCORDS = ['lovewnl', 'benjyvv'];
-
-const adminDiscordRow = document.getElementById('admin-discord-row');
-adminDiscordRow.innerHTML = ADMIN_DISCORDS.map(name => `<span class="discord-pill">${escapeHtml(name)}</span>`).join('');
 
 let entries = [];
 
