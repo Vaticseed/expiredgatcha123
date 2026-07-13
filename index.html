@@ -529,7 +529,7 @@ const FIREBASE_CONFIG = {
 const HENRIK_API_KEY = "HDEV-3e1b5dcb-80ca-402c-8202-dec975c2dc5f";
 
 let useFirebase = false;
-let db, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy;
+let db, collection, addDoc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy;
 let auth, signInWithEmailAndPassword, signOut, onAuthStateChanged;
 let isAdmin = false;
 
@@ -540,7 +540,7 @@ if (FIREBASE_CONFIG) {
     const authLib = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
     const firebaseApp = app.initializeApp(FIREBASE_CONFIG);
     db = fs.getFirestore(firebaseApp);
-    collection = fs.collection; addDoc = fs.addDoc; onSnapshot = fs.onSnapshot;
+    collection = fs.collection; addDoc = fs.addDoc; setDoc = fs.setDoc; getDoc = fs.getDoc; onSnapshot = fs.onSnapshot;
     updateDoc = fs.updateDoc; deleteDoc = fs.deleteDoc; doc = fs.doc; query = fs.query; orderBy = fs.orderBy;
     auth = authLib.getAuth(firebaseApp);
     signInWithEmailAndPassword = authLib.signInWithEmailAndPassword;
@@ -688,18 +688,43 @@ function escapeHtml(str){
   return d.innerHTML;
 }
 
+function hashPart(str){
+  let hash = 5381;
+  for (let i=0;i<str.length;i++){
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return (hash >>> 0).toString(36);
+}
+function normalizePart(s){
+  return (s || '').trim().toLowerCase().replace(/\s+/g, ' ');
+}
+function duplicateKey(type, username, tag){
+  const raw = `${type}::${normalizePart(username)}::${normalizePart(tag)}`;
+  return 'e_' + hashPart(raw) + hashPart(raw.split('').reverse().join(''));
+}
+
+class DuplicateEntryError extends Error {}
+
 async function addEntry(entry){
   entry.createdAt = Date.now();
   entry.verified = !!entry.verified;
+  const key = duplicateKey(entry.type || 'dodge', entry.username, entry.tag);
+
   if (useFirebase) {
-    const ref = await addDoc(collection(db, 'entries'), entry);
-    return ref.id;
+    const ref = doc(db, 'entries', key);
+    const existing = await getDoc(ref);
+    if (existing.exists()) throw new DuplicateEntryError();
+    await setDoc(ref, entry);
+    return key;
   } else {
-    entry.id = 'e' + Math.random().toString(36).slice(2,10);
+    const dupe = entries.some(e => duplicateKey(e.type || 'dodge', e.username, e.tag) === key);
+    if (dupe) throw new DuplicateEntryError();
+    entry.id = key;
     entries.push(entry);
     saveLocal(entries);
     render();
-    return entry.id;
+    return key;
   }
 }
 
@@ -845,7 +870,18 @@ document.getElementById('submit-add').addEventListener('click', async ()=>{
 
   if (!username || !tag) { alert('Username and tag are required.'); return; }
 
-  const newId = await addEntry({ username, tag, reason, type, verified: isAdmin });
+  let newId;
+  try {
+    newId = await addEntry({ username, tag, reason, type, verified: isAdmin });
+  } catch (e) {
+    if (e instanceof DuplicateEntryError) {
+      alert(`${username}#${tag} is already on the ${type === 'cheater' ? 'Cheaters' : 'Dodge'} list.`);
+    } else {
+      alert('Could not submit: ' + e.message);
+    }
+    return;
+  }
+
   if (isAdmin && HENRIK_API_KEY && newId) {
     checkRankFor(newId, username, tag).catch(e => {
       console.warn('Auto rank check failed for new entry:', e.message);
