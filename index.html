@@ -209,6 +209,7 @@
     color:var(--text-dim);
   }
   .badge.disputed-badge{color:var(--cyan);border-color:var(--cyan);}
+  .badge.verified-badge{color:#4ade80;border-color:#4ade80;}
   .reason{color:var(--text-muted);font-size:13.5px;margin-top:8px;line-height:1.5;}
   .meta-row{
     display:flex;justify-content:space-between;align-items:center;
@@ -431,16 +432,20 @@ function render(){
     const card = document.createElement('div');
     card.className = 'entry' + (e.disputed ? ' disputed' : '');
     const date = e.createdAt ? new Date(e.createdAt).toLocaleDateString() : '';
+    let badge = '<span class="badge">Unverified</span>';
+    if (e.disputed) badge = '<span class="badge disputed-badge">Disputed</span>';
+    else if (e.verified) badge = '<span class="badge verified-badge">Verified</span>';
     card.innerHTML = `
       <div class="entry-top">
         <div class="tag">${escapeHtml(e.username)}<span class="hash">#</span>${escapeHtml(e.tag)}</div>
-        ${e.disputed ? '<span class="badge disputed-badge">Disputed</span>' : '<span class="badge">Unverified</span>'}
+        ${badge}
       </div>
       ${e.reason ? `<div class="reason">${escapeHtml(e.reason)}</div>` : ''}
       <div class="meta-row">
         <span>${date}</span>
         <span class="meta-actions">
-          <span data-action="dispute" data-id="${e.id}">${e.disputed ? 'Undo dispute' : 'Dispute'}</span>
+          ${isAdmin ? `<span data-action="dispute" data-id="${e.id}">${e.disputed ? 'Undo dispute' : 'Dispute'}</span>` : ''}
+          ${isAdmin ? `<span data-action="verify" data-id="${e.id}" style="color:#4ade80;">${e.verified ? 'Unverify' : 'Verify'}</span>` : ''}
           ${isAdmin ? `<span data-action="delete" data-id="${e.id}" style="color:var(--accent);">Delete</span>` : ''}
         </span>
       </div>
@@ -450,6 +455,9 @@ function render(){
 
   listEl.querySelectorAll('[data-action="dispute"]').forEach(el=>{
     el.addEventListener('click', ()=> toggleDispute(el.getAttribute('data-id')));
+  });
+  listEl.querySelectorAll('[data-action="verify"]').forEach(el=>{
+    el.addEventListener('click', ()=> toggleVerified(el.getAttribute('data-id')));
   });
   listEl.querySelectorAll('[data-action="delete"]').forEach(el=>{
     el.addEventListener('click', ()=> deleteEntry(el.getAttribute('data-id')));
@@ -465,6 +473,7 @@ function escapeHtml(str){
 async function addEntry(entry){
   entry.createdAt = Date.now();
   entry.disputed = false;
+  entry.verified = false;
   if (useFirebase) {
     await addDoc(collection(db, 'entries'), entry);
   } else {
@@ -482,6 +491,19 @@ async function toggleDispute(id){
   } else {
     const target = entries.find(e=>e.id===id);
     if (target) target.disputed = !target.disputed;
+    saveLocal(entries);
+    render();
+  }
+}
+
+async function toggleVerified(id){
+  if (!isAdmin) return;
+  if (useFirebase) {
+    const target = entries.find(e=>e.id===id);
+    await updateDoc(doc(db, 'entries', id), { verified: !target.verified });
+  } else {
+    const target = entries.find(e=>e.id===id);
+    if (target) target.verified = !target.verified;
     saveLocal(entries);
     render();
   }
