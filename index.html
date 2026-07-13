@@ -183,7 +183,7 @@
     border-bottom:2px solid var(--cyan);
     opacity:0.6;
   }
-  input, textarea{
+  input, textarea, select{
     font-family:'JetBrains Mono',monospace;
     background:var(--bg-panel);
     border:1px solid var(--line);
@@ -195,6 +195,7 @@
     outline:none;
     transition:border-color .15s;
   }
+  select{padding-left:14px;cursor:pointer;}
   textarea{font-family:'Inter',sans-serif;padding-left:14px;resize:vertical;min-height:64px;}
   input:focus, textarea:focus{border-color:var(--cyan);}
   input::placeholder, textarea::placeholder{color:var(--text-dim);}
@@ -287,9 +288,16 @@
     margin-top:12px;padding-top:12px;border-top:1px solid var(--line);
     font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);
   }
-  .meta-actions{display:flex;gap:14px;}
+  .meta-actions{display:flex;gap:14px;align-items:center;}
   .meta-actions span{cursor:pointer;transition:color .15s;}
   .meta-actions span:hover{color:var(--accent);}
+  .rank-tag{
+    display:inline-flex;align-items:center;gap:5px;
+    color:var(--text);
+    cursor:default !important;
+  }
+  .rank-tag:hover{color:var(--text) !important;}
+  .rank-tag img{width:16px;height:16px;}
 
   footer{margin-top:50px;text-align:center;font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;}
   footer a{color:var(--cyan);text-decoration:none;}
@@ -446,6 +454,15 @@ const FIREBASE_CONFIG = {
   appId: "1:6281986139:web:13b3d2c48a06a9acd53f7e"
 };
 
+/* ============================================================
+   VALORANT RANK LOOKUP (optional)
+   Unofficial third-party API (HenrikDev), not affiliated with
+   Riot Games. Get a free "Basic" key at api.henrikdev.xyz/dashboard
+   (requires joining their Discord). Paste it below. Leave as
+   null to hide the "Check Rank" feature entirely.
+   ============================================================ */
+const HENRIK_API_KEY = HDEV-3e1b5dcb-80ca-402c-8202-dec975c2dc5f;
+
 let useFirebase = false;
 let db, collection, addDoc, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy;
 let auth, signInWithEmailAndPassword, signOut, onAuthStateChanged;
@@ -522,6 +539,18 @@ function render(){
     const badge = e.verified
       ? '<span class="badge verified-badge">Verified</span>'
       : '';
+
+    let rankBlock = '';
+    if (HENRIK_API_KEY) {
+      if (rankLoadingIds.has(e.id)) {
+        rankBlock = `<span class="rank-tag">Checking...</span>`;
+      } else if (e.rank) {
+        rankBlock = `<span class="rank-tag">${e.rankImage ? `<img src="${e.rankImage}" alt="">` : ''}${escapeHtml(e.rank)}</span><span data-action="check-rank" data-id="${e.id}" style="color:var(--text-dim);">Refresh</span>`;
+      } else {
+        rankBlock = `<span data-action="check-rank" data-id="${e.id}" style="color:var(--cyan);">Check Rank</span>`;
+      }
+    }
+
     card.innerHTML = `
       <div class="entry-top">
         <div class="tag">${escapeHtml(e.username)}<span class="hash">#</span>${escapeHtml(e.tag)}</div>
@@ -531,6 +560,7 @@ function render(){
       <div class="meta-row">
         <span>${date}</span>
         <span class="meta-actions">
+          ${rankBlock}
           ${isAdmin ? `<span data-action="delete" data-id="${e.id}" style="color:var(--accent);">Delete</span>` : ''}
         </span>
       </div>
@@ -540,6 +570,9 @@ function render(){
 
   listEl.querySelectorAll('[data-action="delete"]').forEach(el=>{
     el.addEventListener('click', ()=> deleteEntry(el.getAttribute('data-id')));
+  });
+  listEl.querySelectorAll('[data-action="check-rank"]').forEach(el=>{
+    el.addEventListener('click', ()=> checkRank(el.getAttribute('data-id')));
   });
 }
 
@@ -569,6 +602,37 @@ async function deleteEntry(id){
   } else {
     entries = entries.filter(e => e.id !== id);
     saveLocal(entries);
+    render();
+  }
+}
+
+const rankLoadingIds = new Set();
+
+async function checkRank(id){
+  if (!HENRIK_API_KEY) { alert('Rank lookup is not set up yet, see README.md.'); return; }
+  const target = entries.find(e => e.id === id);
+  if (!target) return;
+  rankLoadingIds.add(id);
+  render();
+  try {
+    const region = 'eu';
+    const url = `https://api.henrikdev.xyz/valorant/v2/mmr/${region}/${encodeURIComponent(target.username)}/${encodeURIComponent(target.tag)}`;
+    const res = await fetch(url, { headers: { Authorization: HENRIK_API_KEY } });
+    const json = await res.json();
+    if (!res.ok || !json.data) throw new Error(json?.errors?.[0]?.message || 'Rank not found');
+    const rank = json.data.currenttier_patched || 'Unranked';
+    const rankImage = json.data.images?.small || null;
+    const update = { rank, rankImage, rankCheckedAt: Date.now() };
+    if (useFirebase) {
+      await updateDoc(doc(db, 'entries', id), update);
+    } else {
+      Object.assign(target, update);
+      saveLocal(entries);
+    }
+  } catch (e) {
+    alert('Could not fetch rank: ' + e.message);
+  } finally {
+    rankLoadingIds.delete(id);
     render();
   }
 }
