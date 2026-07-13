@@ -272,7 +272,7 @@
     font-size:17px;font-weight:700;
     color:var(--text);
     direction:ltr;
-    unicode-bidi:embed;
+    unicode-bidi:isolate;
   }
   .tag .hash{color:var(--accent);}
   .badge{
@@ -426,11 +426,11 @@
     <div class="grid2">
       <div>
         <label class="field-label">Username</label>
-        <input id="in-username" type="text" placeholder="PlayerName" style="direction:ltr;unicode-bidi:embed;">
+        <input id="in-username" type="text" placeholder="PlayerName" dir="auto">
       </div>
       <div>
         <label class="field-label">Tag</label>
-        <input id="in-tag" type="text" placeholder="1337" style="direction:ltr;unicode-bidi:embed;">
+        <input id="in-tag" type="text" placeholder="1337" dir="auto">
       </div>
     </div>
     <label class="field-label">Reason (optional)</label>
@@ -567,7 +567,7 @@ function render(){
     card.innerHTML = `
       ${rankIconHtml}
       <div class="entry-top">
-        <div class="tag">${escapeHtml(e.username)}<span class="hash">#</span>${escapeHtml(e.tag)}</div>
+        <div class="tag"><bdi>${escapeHtml(e.username)}</bdi><span class="hash">#</span><bdi>${escapeHtml(e.tag)}</bdi></div>
         ${badge}
       </div>
       ${e.reason ? `<div class="reason">${escapeHtml(e.reason)}</div>` : ''}
