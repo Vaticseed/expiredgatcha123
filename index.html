@@ -312,11 +312,14 @@
   .badge.verified-badge{color:#4ade80;border-color:#4ade80;}
   .reason{color:var(--text-muted);font-size:13.5px;margin-top:8px;line-height:1.5;}
   .meta-row{
-    display:flex;justify-content:flex-end;align-items:center;
+    display:flex;justify-content:space-between;align-items:center;
     margin-top:12px;padding-top:12px;border-top:1px solid var(--line);
     font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);
   }
   .meta-actions{display:flex;gap:14px;align-items:center;}
+  .profile-links{display:flex;gap:14px;align-items:center;}
+  .profile-links a{color:var(--text-dim);text-decoration:none;transition:color .15s;}
+  .profile-links a:hover{color:var(--cyan);text-decoration:underline;}
   .meta-actions span{cursor:pointer;transition:color .15s;}
   .meta-actions span:hover{color:var(--accent);}
   .rank-tag{
@@ -434,15 +437,15 @@
       <div class="admin-discord-row" id="admin-discord-row"></div>
     </div>
     <div class="stat-row">
-      <div><div class="stat-num" id="stat-total">0</div><div class="stat-label" id="stat-label">Entries</div></div>
+      <div><div class="stat-num" id="stat-total">0</div><div class="stat-label" id="stat-label">Cheaters</div></div>
     </div>
   </header>
 
 
 
   <div class="tab-row">
-    <button class="tab-btn active" data-tab="dodge" id="tab-dodge">Dodge List</button>
-    <button class="tab-btn" data-tab="cheater" id="tab-cheater">Cheaters</button>
+    <button class="tab-btn active" data-tab="cheater" id="tab-cheater">Cheaters</button>
+    <button class="tab-btn" data-tab="dodge" id="tab-dodge">Dodge List</button>
   </div>
 
   <div class="controls">
@@ -558,7 +561,7 @@ const adminDiscordRow = document.getElementById('admin-discord-row');
 adminDiscordRow.innerHTML = ADMIN_DISCORDS.map(name => `<span class="discord-pill">${escapeHtml(name)}</span>`).join('');
 
 let entries = [];
-let activeTab = 'dodge';
+let activeTab = 'cheater';
 
 function render(){
   const listEl = document.getElementById('list');
@@ -609,10 +612,11 @@ function render(){
     }
 
     const trackerUrl = `https://tracker.gg/valorant/profile/riot/${encodeURIComponent(`${e.username}#${e.tag}`)}/overview`;
+    const vtlUrl = `https://vtl.lol/${encodeURIComponent(e.username)}_${encodeURIComponent(e.tag)}`;
 
     card.innerHTML = `
       <div class="entry-top">
-        <a class="tag" href="${trackerUrl}" target="_blank" rel="noopener noreferrer"><bdi>${escapeHtml(e.username)}</bdi><span class="hash">#</span><bdi>${escapeHtml(e.tag)}</bdi></a>
+        <div class="tag"><bdi>${escapeHtml(e.username)}</bdi><span class="hash">#</span><bdi>${escapeHtml(e.tag)}</bdi></div>
         <div class="entry-top-right">
           ${badge}
           ${rankIconHtml}
@@ -620,6 +624,10 @@ function render(){
       </div>
       ${e.reason ? `<div class="reason">${escapeHtml(e.reason)}</div>` : ''}
       <div class="meta-row">
+        <span class="profile-links">
+          <a href="${trackerUrl}" target="_blank" rel="noopener noreferrer">tracker.gg</a>
+          <a href="${vtlUrl}" target="_blank" rel="noopener noreferrer">vtl.lol</a>
+        </span>
         <span class="meta-actions">
           ${rankAction}
           ${isAdmin ? `<span data-action="delete" data-id="${e.id}" style="color:var(--accent);">Delete</span>` : ''}
