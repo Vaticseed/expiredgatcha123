@@ -169,6 +169,27 @@
   .notice strong{color:var(--text);}
 
   /* ---- Search + Add bar ---- */
+  .tab-row{display:flex;gap:8px;margin-bottom:20px;}
+  .tab-btn{
+    font-family:'Chakra Petch',sans-serif;
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text-muted);
+    padding:10px 20px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .tab-btn:hover{color:var(--text);border-color:var(--text-muted);}
+  .tab-btn.active{
+    background:rgba(255,70,85,0.1);
+    border-color:var(--accent);
+    color:var(--accent);
+  }
   .controls{display:flex;gap:10px;margin-bottom:24px;flex-wrap:wrap;}
   .scan-box{
     flex:1;min-width:220px;
@@ -413,11 +434,16 @@
       <div class="admin-discord-row" id="admin-discord-row"></div>
     </div>
     <div class="stat-row">
-      <div><div class="stat-num" id="stat-total">0</div><div class="stat-label">Entries</div></div>
+      <div><div class="stat-num" id="stat-total">0</div><div class="stat-label" id="stat-label">Entries</div></div>
     </div>
   </header>
 
 
+
+  <div class="tab-row">
+    <button class="tab-btn active" data-tab="dodge" id="tab-dodge">Dodge List</button>
+    <button class="tab-btn" data-tab="cheater" id="tab-cheater">Cheaters</button>
+  </div>
 
   <div class="controls">
     <div class="scan-box"><input id="search" type="text" placeholder="Search by Username#Tag..." autocomplete="off"></div>
@@ -438,6 +464,12 @@
     </div>
     <label class="field-label">Reason (optional)</label>
     <textarea id="in-reason" placeholder="What happened? Be specific, this is what other players will see."></textarea>
+    <div style="height:10px;"></div>
+    <label class="field-label">List</label>
+    <select id="in-type">
+      <option value="dodge">Dodge List</option>
+      <option value="cheater">Cheaters</option>
+    </select>
     <div class="form-actions">
       <button class="btn-ghost" id="cancel-add">Cancel</button>
       <button class="btn-primary" id="submit-add">Submit Report</button>
@@ -526,13 +558,16 @@ const adminDiscordRow = document.getElementById('admin-discord-row');
 adminDiscordRow.innerHTML = ADMIN_DISCORDS.map(name => `<span class="discord-pill">${escapeHtml(name)}</span>`).join('');
 
 let entries = [];
+let activeTab = 'dodge';
 
 function render(){
   const listEl = document.getElementById('list');
   const emptyEl = document.getElementById('empty-state');
   const q = document.getElementById('search').value.trim().toLowerCase();
 
-  const filtered = entries
+  const tabEntries = entries.filter(e => (e.type || 'dodge') === activeTab);
+
+  const filtered = tabEntries
     .slice()
     .sort((a,b)=> {
       const tierA = typeof a.rankTier === 'number' ? a.rankTier : -1;
@@ -546,7 +581,9 @@ function render(){
       return full.includes(q) || e.username.toLowerCase().includes(q);
     });
 
-  document.getElementById('stat-total').textContent = entries.length;
+  document.getElementById('stat-total').textContent = tabEntries.length;
+  document.getElementById('stat-label').textContent = activeTab === 'cheater' ? 'Cheaters' : 'Entries';
+
 
   listEl.innerHTML = '';
   emptyEl.style.display = filtered.length ? 'none' : 'block';
@@ -696,6 +733,16 @@ if (useFirebase) {
 /* ---- UI wiring ---- */
 document.getElementById('search').addEventListener('input', render);
 
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    activeTab = btn.getAttribute('data-tab');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+    const typeSelect = document.getElementById('in-type');
+    if (typeSelect) typeSelect.value = activeTab;
+    render();
+  });
+});
+
 document.getElementById('in-username').addEventListener('paste', (ev)=>{
   const pasted = (ev.clipboardData || window.clipboardData).getData('text');
   if (pasted && pasted.includes('#')) {
@@ -710,6 +757,7 @@ document.getElementById('in-username').addEventListener('paste', (ev)=>{
 const addPanel = document.getElementById('add-panel');
 document.getElementById('toggle-add').addEventListener('click', ()=>{
   addPanel.classList.toggle('open');
+  document.getElementById('in-type').value = activeTab;
 });
 document.getElementById('cancel-add').addEventListener('click', ()=>{
   addPanel.classList.remove('open');
@@ -719,10 +767,11 @@ document.getElementById('submit-add').addEventListener('click', async ()=>{
   const username = document.getElementById('in-username').value.trim();
   const tag = document.getElementById('in-tag').value.trim().replace(/^#/,'');
   const reason = document.getElementById('in-reason').value.trim();
+  const type = document.getElementById('in-type').value;
 
   if (!username || !tag) { alert('Username and tag are required.'); return; }
 
-  const newId = await addEntry({ username, tag, reason });
+  const newId = await addEntry({ username, tag, reason, type });
   if (HENRIK_API_KEY && newId) {
     checkRankFor(newId, username, tag).catch(e => {
       console.warn('Auto rank check failed for new entry:', e.message);
