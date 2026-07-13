@@ -601,12 +601,14 @@ async function addEntry(entry){
   entry.createdAt = Date.now();
   entry.verified = true;
   if (useFirebase) {
-    await addDoc(collection(db, 'entries'), entry);
+    const ref = await addDoc(collection(db, 'entries'), entry);
+    return ref.id;
   } else {
     entry.id = 'e' + Math.random().toString(36).slice(2,10);
     entries.push(entry);
     saveLocal(entries);
     render();
+    return entry.id;
   }
 }
 
@@ -623,16 +625,14 @@ async function deleteEntry(id){
 
 const rankLoadingIds = new Set();
 
-async function checkRank(id){
+async function checkRankFor(id, username, tag){
   if (!isAdmin) return;
-  if (!HENRIK_API_KEY) { alert('Rank lookup is not set up yet, see README.md.'); return; }
-  const target = entries.find(e => e.id === id);
-  if (!target) return;
+  if (!HENRIK_API_KEY) return;
   rankLoadingIds.add(id);
   render();
   try {
     const region = 'eu';
-    const url = `https://api.henrikdev.xyz/valorant/v2/mmr/${region}/${encodeURIComponent(target.username)}/${encodeURIComponent(target.tag)}`;
+    const url = `https://api.henrikdev.xyz/valorant/v2/mmr/${region}/${encodeURIComponent(username)}/${encodeURIComponent(tag)}`;
     const res = await fetch(url, { headers: { Authorization: HENRIK_API_KEY } });
     const json = await res.json();
     if (!res.ok || !json.data) throw new Error(json?.errors?.[0]?.message || 'Rank not found');
@@ -643,14 +643,28 @@ async function checkRank(id){
     if (useFirebase) {
       await updateDoc(doc(db, 'entries', id), update);
     } else {
-      Object.assign(target, update);
+      const target = entries.find(e => e.id === id);
+      if (target) Object.assign(target, update);
       saveLocal(entries);
     }
   } catch (e) {
-    alert('Could not fetch rank: ' + e.message);
+    console.warn('Could not fetch rank for', username, tag, ':', e.message);
+    throw e;
   } finally {
     rankLoadingIds.delete(id);
     render();
+  }
+}
+
+async function checkRank(id){
+  if (!isAdmin) return;
+  if (!HENRIK_API_KEY) { alert('Rank lookup is not set up yet, see README.md.'); return; }
+  const target = entries.find(e => e.id === id);
+  if (!target) return;
+  try {
+    await checkRankFor(id, target.username, target.tag);
+  } catch (e) {
+    alert('Could not fetch rank: ' + e.message);
   }
 }
 
@@ -694,7 +708,12 @@ document.getElementById('submit-add').addEventListener('click', async ()=>{
 
   if (!username || !tag) { alert('Username and tag are required.'); return; }
 
-  await addEntry({ username, tag, reason });
+  const newId = await addEntry({ username, tag, reason });
+  if (HENRIK_API_KEY && newId) {
+    checkRankFor(newId, username, tag).catch(e => {
+      console.warn('Auto rank check failed for new entry:', e.message);
+    });
+  }
 
   document.getElementById('in-username').value = '';
   document.getElementById('in-tag').value = '';
