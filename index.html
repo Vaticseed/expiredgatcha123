@@ -340,6 +340,17 @@
   .badge.pending-badge{color:var(--gold);border-color:var(--gold);}
   .badge.pinned-badge{color:var(--gold);border-color:var(--gold);background:rgba(232,179,57,0.08);}
   .reason{color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5;}
+  .reason-row{display:flex;align-items:flex-start;gap:8px;}
+  .reason-row .reason{flex:1;margin-top:6px;}
+  .edit-reason-btn{
+    flex-shrink:0;
+    margin-top:6px;
+    cursor:pointer;
+    color:var(--text-dim);
+    font-size:13px;
+    transition:color .15s;
+  }
+  .edit-reason-btn:hover{color:var(--info);}
   .entry-evidence{
     display:block;
     max-width:220px;
@@ -511,7 +522,7 @@
 
   <div class="contact-card">
     <div class="contact-text">
-      <p class="contact-title">Want someone added or removed?</p>
+      <p class="contact-title">Want someone removed?</p>
       <p class="contact-sub">Message an admin on Discord and they'll review the request.</p>
     </div>
     <div class="admin-discord-row" id="admin-discord-row"></div>
@@ -765,7 +776,12 @@ function render(){
           ${rankIconHtml}
         </div>
       </div>
-      ${e.reason ? `<div class="reason">${escapeHtml(e.reason)}</div>` : ''}
+      ${e.reason || isAdmin ? `
+        <div class="reason-row">
+          <div class="reason">${e.reason ? escapeHtml(e.reason) : (isAdmin ? '<span style="color:var(--text-dim);font-style:italic;">No description</span>' : '')}</div>
+          ${isAdmin ? `<span class="edit-reason-btn" data-action="edit-reason" data-id="${e.id}" title="Edit description">✎</span>` : ''}
+        </div>
+      ` : ''}
       ${e.imageUrl ? `
         <a href="${e.imageUrl}" target="_blank" rel="noopener noreferrer"><img class="entry-evidence" src="${e.imageUrl}" alt="Screenshot"></a>
         ${isAdmin ? `<div style="margin-top:5px;"><span data-action="remove-screenshot" data-id="${e.id}" style="cursor:pointer;color:var(--text-dim);font-size:11px;font-family:'JetBrains Mono',monospace;">Remove Screenshot</span></div>` : ''}
@@ -800,6 +816,9 @@ function render(){
   });
   listEl.querySelectorAll('[data-action="remove-screenshot"]').forEach(el=>{
     el.addEventListener('click', ()=> removeScreenshot(el.getAttribute('data-id')));
+  });
+  listEl.querySelectorAll('[data-action="edit-reason"]').forEach(el=>{
+    el.addEventListener('click', ()=> editReason(el.getAttribute('data-id')));
   });
 }
 
@@ -965,6 +984,22 @@ async function removeScreenshot(id){
   } else {
     const target = entries.find(e => e.id === id);
     if (target) target.imageUrl = null;
+    saveLocal(entries);
+    render();
+  }
+}
+
+async function editReason(id){
+  if (!isAdmin) return;
+  const target = entries.find(e => e.id === id);
+  if (!target) return;
+  const newReason = prompt('Edit description:', target.reason || '');
+  if (newReason === null) return; // cancelled
+  const trimmed = newReason.trim();
+  if (useFirebase) {
+    await updateDoc(doc(db, 'entries', id), { reason: trimmed });
+  } else {
+    target.reason = trimmed;
     saveLocal(entries);
     render();
   }
