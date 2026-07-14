@@ -157,6 +157,22 @@
   .tab-btn.active{background:var(--panel);color:var(--accent);}
   #tab-pending{color:var(--gold);}
   #tab-pending.active{color:var(--gold);}
+  .pending-count-badge{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:18px;
+    height:18px;
+    padding:0 5px;
+    margin-left:7px;
+    border-radius:9px;
+    background:var(--accent);
+    color:#180608;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    font-weight:700;
+    vertical-align:middle;
+  }
   .tab-row + .controls{border-top:1px solid var(--line);padding-top:20px;}
 
   /* ---- Search + Add bar ---- */
@@ -463,7 +479,7 @@
 
   <div class="contact-card">
     <div class="contact-text">
-      <p class="contact-title">Want someone removed?</p>
+      <p class="contact-title">Want someone added or removed?</p>
       <p class="contact-sub">Message an admin on Discord and they'll review the request.</p>
     </div>
     <div class="admin-discord-row" id="admin-discord-row"></div>
@@ -474,7 +490,7 @@
   <div class="tab-row">
     <button class="tab-btn active" data-tab="cheater" id="tab-cheater">Cheaters</button>
     <button class="tab-btn" data-tab="dodge" id="tab-dodge">Dodge List</button>
-    <button class="tab-btn" data-tab="pending" id="tab-pending" style="display:none;">Pending Review</button>
+    <button class="tab-btn" data-tab="pending" id="tab-pending" style="display:none;">Pending Review<span id="pending-count-badge" class="pending-count-badge" style="display:none;"></span></button>
   </div>
 
   <div class="controls">
@@ -614,6 +630,15 @@ function render(){
   const listEl = document.getElementById('list');
   const emptyEl = document.getElementById('empty-state');
   const q = document.getElementById('search').value.trim().toLowerCase();
+
+  const pendingCount = entries.filter(e => !e.verified).length;
+  const pendingBadge = document.getElementById('pending-count-badge');
+  if (pendingCount > 0) {
+    pendingBadge.textContent = pendingCount > 99 ? '99+' : pendingCount;
+    pendingBadge.style.display = 'inline-flex';
+  } else {
+    pendingBadge.style.display = 'none';
+  }
 
   const tabEntries = activeTab === 'pending'
     ? entries.filter(e => !e.verified)
