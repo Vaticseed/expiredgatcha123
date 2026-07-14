@@ -389,6 +389,7 @@
 
 <div class="admin-corner" id="admin-login-corner">
   <button class="admin-btn" id="admin-toggle-btn"><span class="dot"></span><span id="admin-btn-label">Admin</span></button>
+  <button class="admin-btn" id="manage-protected-btn" style="display:none;margin-top:6px;">Manage Protected</button>
   <div class="admin-dropdown" id="admin-dropdown">
     <div id="admin-login-fields">
       <h3>Admin login</h3>
@@ -405,11 +406,11 @@
     <div id="admin-logged-in" style="display:none;">
       <h3>Admin</h3>
       <p class="sub">You're logged in. You can add entries and delete any entry.</p>
-      <div class="form-actions" style="justify-content:space-between;">
-        <span id="manage-protected-link" style="cursor:pointer;color:var(--info);font-size:12px;align-self:center;">Manage protected accounts</span>
+      <div class="form-actions">
         <button class="btn-ghost" id="admin-logout-btn">Log out</button>
       </div>
     </div>
+
   </div>
 </div>
 
@@ -548,8 +549,12 @@ if (FIREBASE_CONFIG) {
       document.getElementById('admin-logged-in').style.display = isAdmin ? 'block' : 'none';
       document.getElementById('admin-btn-label').textContent = isAdmin ? 'Admin ✓' : 'Admin';
       document.getElementById('admin-toggle-btn').classList.toggle('is-admin', isAdmin);
+      document.getElementById('manage-protected-btn').style.display = isAdmin ? 'flex' : 'none';
       updateAddAccess();
-      if (!isAdmin) document.getElementById('add-panel').classList.remove('open');
+      if (!isAdmin) {
+        document.getElementById('add-panel').classList.remove('open');
+        document.getElementById('protected-panel').classList.remove('open');
+      }
       render();
     });
   } catch (e) {
@@ -1043,10 +1048,11 @@ document.getElementById('admin-logout-btn').addEventListener('click', async ()=>
 });
 
 const protectedPanel = document.getElementById('protected-panel');
-document.getElementById('manage-protected-link').addEventListener('click', ()=>{
+document.getElementById('manage-protected-btn').addEventListener('click', (ev)=>{
+  ev.stopPropagation();
   adminDropdown.classList.remove('open');
   renderProtectedList();
-  protectedPanel.classList.add('open');
+  protectedPanel.classList.toggle('open');
 });
 document.getElementById('protected-close').addEventListener('click', ()=>{
   protectedPanel.classList.remove('open');
