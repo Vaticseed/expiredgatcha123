@@ -23,7 +23,7 @@ import { getFirestore } from 'firebase-admin/firestore';
 const HENRIK_API_KEY = process.env.HENRIK_API_KEY;
 const FIREBASE_SERVICE_ACCOUNT = process.env.FIREBASE_SERVICE_ACCOUNT;
 const REGION = 'eu';
-const DELAY_MS = 2200; // ~27 requests/minute, safely under the 30/min cap
+const DELAY_MS = 4000; // 15 requests/minute
 
 // How many CONSECUTIVE confirmed "account not found" runs in a row
 // before an entry gets deleted. At one run/hour, 3 = roughly 3 hours
