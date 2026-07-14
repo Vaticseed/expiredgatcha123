@@ -210,6 +210,28 @@
   textarea{font-family:'Inter',sans-serif;resize:vertical;min-height:64px;}
   input:focus, textarea:focus, select:focus{border-color:var(--info);}
   input::placeholder, textarea::placeholder{color:var(--text-dim);}
+  input[type="file"]{
+    padding:9px 12px;
+    font-size:12px;
+    color:var(--text-muted);
+    cursor:pointer;
+  }
+  input[type="file"]::file-selector-button{
+    font-family:'Oswald',sans-serif;
+    font-weight:600;
+    font-size:11px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    padding:7px 12px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    margin-right:10px;
+    transition:border-color .15s;
+  }
+  input[type="file"]::file-selector-button:hover{border-color:var(--text-muted);}
 
   button{
     font-family:'Oswald',sans-serif;
@@ -318,6 +340,16 @@
   .badge.pending-badge{color:var(--gold);border-color:var(--gold);}
   .badge.pinned-badge{color:var(--gold);border-color:var(--gold);background:rgba(232,179,57,0.08);}
   .reason{color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5;}
+  .entry-evidence{
+    display:block;
+    max-width:220px;
+    max-height:140px;
+    margin-top:8px;
+    border:1px solid var(--line);
+    cursor:pointer;
+    transition:border-color .15s;
+  }
+  .entry-evidence:hover{border-color:var(--info);}
   .meta-row{
     display:flex;justify-content:space-between;align-items:center;
     margin-top:10px;padding-top:0;border-top:none;
@@ -512,6 +544,12 @@
     </div>
     <label class="field-label">Reason (optional)</label>
     <textarea id="in-reason" placeholder="What happened? Be specific, this is what other players will see."></textarea>
+    <div style="height:10px;"></div>
+    <div id="image-field-wrap">
+      <label class="field-label">Screenshot (optional, max 5MB)</label>
+      <input id="in-image" type="file" accept="image/*">
+      <img id="in-image-preview" style="display:none;max-width:100%;max-height:160px;margin-top:8px;border:1px solid var(--line);">
+    </div>
     <div id="type-field-wrap">
       <div style="height:10px;"></div>
       <label class="field-label">List</label>
@@ -558,6 +596,21 @@ const FIREBASE_CONFIG = {
    null to hide the "Check Rank" feature entirely.
    ============================================================ */
 const HENRIK_API_KEY = "HDEV-3e1b5dcb-80ca-402c-8202-dec975c2dc5f";
+
+/* ============================================================
+   SCREENSHOT UPLOADS (optional)
+   Uses Cloudinary's free "unsigned upload" feature, built
+   specifically for direct browser uploads (real CORS support,
+   not a workaround). No cost, no card, separate free account.
+   1. Sign up free at https://cloudinary.com (email/Google/GitHub)
+   2. Dashboard shows your "Cloud name" at the top, copy it below
+   3. Settings (gear icon) -> Upload -> Upload presets -> Add
+      upload preset -> Signing Mode: "Unsigned" -> Save -> copy
+      the preset name below
+   Leave CLOUDINARY_CLOUD_NAME as null to hide the upload field.
+   ============================================================ */
+const CLOUDINARY_CLOUD_NAME = "hmi1kjrf";
+const CLOUDINARY_UPLOAD_PRESET = "dodge-list";
 
 let useFirebase = false;
 let db, collection, addDoc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy;
@@ -707,6 +760,7 @@ function render(){
         </div>
       </div>
       ${e.reason ? `<div class="reason">${escapeHtml(e.reason)}</div>` : ''}
+      ${e.imageUrl ? `<a href="${e.imageUrl}" target="_blank" rel="noopener noreferrer"><img class="entry-evidence" src="${e.imageUrl}" alt="Screenshot"></a>` : ''}
       <div class="meta-row">
         <span class="profile-links">
           <a href="${trackerUrl}" target="_blank" rel="noopener noreferrer">tracker.gg</a>
@@ -982,6 +1036,26 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
   });
 });
 
+if (!CLOUDINARY_CLOUD_NAME || !CLOUDINARY_UPLOAD_PRESET) {
+  document.getElementById('image-field-wrap').style.display = 'none';
+}
+
+document.getElementById('in-image').addEventListener('change', (ev)=>{
+  const file = ev.target.files[0];
+  const preview = document.getElementById('in-image-preview');
+  if (!file) { preview.style.display = 'none'; preview.src = ''; return; }
+  if (file.size > 5 * 1024 * 1024) {
+    alert('That image is over 5MB, please pick a smaller one.');
+    ev.target.value = '';
+    preview.style.display = 'none';
+    preview.src = '';
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => { preview.src = reader.result; preview.style.display = 'block'; };
+  reader.readAsDataURL(file);
+});
+
 document.getElementById('in-username').addEventListener('paste', (ev)=>{
   const pasted = (ev.clipboardData || window.clipboardData).getData('text');
   if (pasted && pasted.includes('#')) {
@@ -1041,6 +1115,29 @@ document.getElementById('submit-add').addEventListener('click', async ()=>{
     submitBtn.textContent = 'Submit Report';
   }
 
+  let imageUrl = null;
+  const imageFile = document.getElementById('in-image').files[0];
+  if (imageFile && CLOUDINARY_CLOUD_NAME && CLOUDINARY_UPLOAD_PRESET) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Uploading image...';
+    try {
+      const form = new FormData();
+      form.append('file', imageFile);
+      form.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+        method: 'POST',
+        body: form,
+      });
+      const json = await res.json();
+      if (!res.ok || !json.secure_url) throw new Error(json?.error?.message || `HTTP ${res.status}`);
+      imageUrl = json.secure_url;
+    } catch (e) {
+      alert('Could not upload the screenshot, submitting without it. (' + e.message + ')');
+    }
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Submit Report';
+  }
+
   const entryData = { username, tag, reason, type, verified: isAdmin };
   if (rankData) {
     entryData.rank = rankData.rank;
@@ -1048,6 +1145,7 @@ document.getElementById('submit-add').addEventListener('click', async ()=>{
     entryData.rankTier = rankData.rankTier;
     entryData.rankCheckedAt = Date.now();
   }
+  if (imageUrl) entryData.imageUrl = imageUrl;
 
   let newId;
   try {
@@ -1074,6 +1172,9 @@ document.getElementById('submit-add').addEventListener('click', async ()=>{
   document.getElementById('in-username').value = '';
   document.getElementById('in-tag').value = '';
   document.getElementById('in-reason').value = '';
+  document.getElementById('in-image').value = '';
+  document.getElementById('in-image-preview').style.display = 'none';
+  document.getElementById('in-image-preview').src = '';
   addPanel.classList.remove('open');
   if (!isAdmin) alert("Thanks, your report was submitted. It won't be visible to others until an admin reviews it, they'll verify or deny it soon.");
 });
