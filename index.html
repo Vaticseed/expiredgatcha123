@@ -303,115 +303,98 @@
     text-align:center;padding:60px 20px;color:var(--text-dim);
     font-family:'JetBrains Mono',monospace;font-size:13px;
   }
-  #list{counter-reset: rownum;}
-  .entry{
-    counter-increment: rownum;
-    position:relative;
-    background:transparent;
-    border-bottom:1px solid var(--line);
-    padding:16px 14px 16px 62px;
-    margin-bottom:0;
-    border-radius:0;
+  .entries-table{width:100%;border-collapse:collapse;font-size:13.5px;}
+  .entries-table thead th{
+    text-align:left;
+    font-family:'Oswald',sans-serif;font-weight:600;font-size:10.5px;
+    letter-spacing:0.08em;text-transform:uppercase;color:var(--text-dim);
+    padding:8px 10px;border-bottom:1px solid var(--line);
+    white-space:nowrap;
   }
-  .entry::before{
-    content: counter(rownum, decimal-leading-zero);
-    position:absolute;
-    left:10px;top:16px;
-    width:38px;
-    text-align:right;
-    font-family:'Oswald',sans-serif;
-    font-weight:500;font-style:italic;
-    font-size:19px;
-    color:var(--text-dim);
+  .entries-table tbody td{
+    padding:12px 10px;border-bottom:1px solid var(--line);
+    vertical-align:top;
   }
-  .entry.pinned::before{color:var(--gold);}
-  .entry::after{
-    content:'';
-    position:absolute;left:0;top:0;bottom:0;width:3px;
-    background:transparent;
-  }
-  .entry.pinned::after{background:var(--gold);}
-  .entry.pending::after{background:repeating-linear-gradient(var(--text-dim) 0 4px, transparent 4px 8px);}
-  .entry-top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;}
-  .entry-top-right{display:flex;align-items:center;gap:10px;}
+  .entries-table tbody tr:hover{background:var(--panel);}
+  .entries-table tbody tr.pinned{background:rgba(232,179,57,0.05);}
+  .pin-cell{width:20px;text-align:center;font-size:14px;}
   .tag{
     font-family:'JetBrains Mono',monospace;
-    font-size:16px;font-weight:700;
+    font-size:15px;font-weight:700;
     color:var(--text);
     direction:ltr;
     unicode-bidi:isolate;
     display:inline-block;
   }
   .tag .hash{color:var(--accent);}
-  .badge{
+  .list-tag{
+    display:block;
+    margin-top:4px;
     font-family:'Oswald',sans-serif;
-    font-size:10px;font-weight:600;letter-spacing:0.08em;
-    padding:3px 8px;border-radius:0;
+    font-size:9.5px;font-weight:600;letter-spacing:0.06em;
     text-transform:uppercase;
-    border:1px solid var(--text-dim);
     color:var(--text-dim);
+    border:1px solid var(--text-dim);
+    padding:2px 6px;
+    width:fit-content;
   }
-  .badge.verified-badge{color:var(--good);border-color:var(--good);}
-  .badge.pending-badge{color:var(--gold);border-color:var(--gold);}
-  .badge.pinned-badge{color:var(--gold);border-color:var(--gold);background:rgba(232,179,57,0.08);}
-  .reason{color:var(--text-muted);font-size:13px;margin-top:6px;line-height:1.5;}
+  .reason-cell{max-width:340px;}
   .reason-row{display:flex;align-items:flex-start;gap:8px;}
-  .reason-row .reason{flex:1;margin-top:6px;}
+  .reason{color:var(--text-muted);font-size:12.5px;line-height:1.5;flex:1;}
   .edit-reason-btn{
     flex-shrink:0;
-    margin-top:6px;
     cursor:pointer;
     color:var(--text-dim);
     font-size:13px;
     transition:color .15s;
   }
   .edit-reason-btn:hover{color:var(--info);}
-  .entry-evidence{
-    display:block;
-    max-width:220px;
-    max-height:140px;
-    margin-top:8px;
+  .evidence-thumb{
+    width:72px;height:72px;object-fit:cover;
     border:1px solid var(--line);
     cursor:pointer;
     transition:border-color .15s;
+    display:block;
+    margin-top:8px;
   }
-  .entry-evidence:hover{border-color:var(--info);}
-  .meta-row{
-    display:flex;justify-content:space-between;align-items:center;
-    margin-top:10px;padding-top:0;border-top:none;
-    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);
+  .evidence-thumb:hover{border-color:var(--info);}
+  .remove-ss-link{
+    display:block;
+    margin-top:4px;
+    cursor:pointer;
+    color:var(--text-dim);
+    font-size:10.5px;
+    font-family:'JetBrains Mono',monospace;
   }
-  .meta-actions{display:flex;gap:14px;align-items:center;}
-  .profile-links{display:flex;gap:8px;align-items:center;}
-  .profile-links a{
-    display:inline-flex;
-    align-items:center;
+  .remove-ss-link:hover{color:var(--accent);}
+  .links-cell{white-space:nowrap;}
+  .links-cell a{
+    display:inline-block;
     font-size:11px;
     font-weight:700;
-    letter-spacing:0.02em;
     color:var(--info);
     background:transparent;
     border:1px solid var(--info);
     padding:4px 9px;
-    border-radius:var(--radius);
     text-decoration:none;
     transition:background .15s;
+    margin-right:6px;
+    margin-bottom:4px;
   }
-  .profile-links a:hover{background:rgba(94,169,160,0.14);}
-  .meta-actions span{cursor:pointer;transition:color .15s;}
-  .meta-actions span:hover{color:var(--accent);}
+  .links-cell a:hover{background:rgba(94,169,160,0.14);}
+  .admin-cell{white-space:nowrap;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text-dim);}
+  .admin-cell span{cursor:pointer;margin-right:12px;transition:color .15s;}
+  .admin-cell span:hover{color:var(--accent);}
   .rank-tag{
-    display:inline-flex;align-items:center;gap:5px;
+    display:inline-block;
     color:var(--text);
     cursor:default !important;
+    font-size:11px;
+    margin-right:12px;
   }
-  .rank-tag:hover{color:var(--text) !important;}
-  .rank-tag img{width:16px;height:16px;}
-
   .rank-icon-large{
-    width:34px;height:34px;
+    width:32px;height:32px;
     filter:drop-shadow(0 0 6px rgba(0,0,0,0.4));
-    flex-shrink:0;
   }
 
   footer{margin-top:50px;text-align:center;font-size:11px;color:var(--text-dim);font-family:'JetBrains Mono',monospace;}
@@ -472,10 +455,10 @@
     .controls{flex-direction:column;}
     header{align-items:flex-start;}
     .header-right{text-align:left;}
-    .entry{padding-left:50px;}
-    .entry::before{left:6px;width:32px;font-size:16px;}
     .tab-row{flex-wrap:wrap;row-gap:8px;}
     .rank-filter{margin-left:0;width:100%;}
+    .entries-table-wrap{overflow-x:auto;}
+    .entries-table{min-width:640px;}
   }
 </style>
 </head>
@@ -484,11 +467,12 @@
 <div class="admin-corner" id="admin-login-corner">
   <button class="admin-btn" id="admin-toggle-btn"><span class="dot"></span><span id="admin-btn-label">Admin</span></button>
   <button class="admin-btn" id="manage-protected-btn" style="display:none;margin-top:6px;">Manage Protected</button>
+  <button class="admin-btn" id="view-logs-btn" style="display:none;margin-top:6px;">View Logs</button>
   <div class="admin-dropdown" id="admin-dropdown">
     <div id="admin-login-fields">
       <h3>Admin login</h3>
-      <label class="field-label">Email</label>
-      <input id="admin-email" type="email" placeholder="you@example.com" autocomplete="username">
+      <label class="field-label">Username</label>
+      <input id="admin-email" type="text" placeholder="username" autocomplete="username">
       <div style="height:10px;"></div>
       <label class="field-label">Password</label>
       <input id="admin-password" type="password" placeholder="••••••••" autocomplete="current-password">
@@ -521,6 +505,18 @@
     <div class="form-actions">
       <button class="btn-ghost" id="protected-close">Close</button>
       <button class="btn-primary" id="protected-add-btn">Add</button>
+    </div>
+  </div>
+</div>
+
+<div class="admin-corner" id="logs-panel-wrap" style="left:auto;right:16px;top:70px;">
+  <div class="admin-dropdown" id="logs-panel" style="width:360px;">
+    <h3>Activity Log</h3>
+    <p class="sub">Only visible to you. Shows who added, verified, or removed entries.</p>
+    <div id="logs-list-ui" style="max-height:320px;overflow-y:auto;margin-bottom:14px;"></div>
+    <div class="form-actions">
+      <button class="btn-ghost" id="logs-close">Close</button>
+      <button class="btn-primary" id="logs-refresh-btn">Refresh</button>
     </div>
   </div>
 </div>
@@ -605,7 +601,14 @@
     </div>
   </div>
 
-  <div id="list"></div>
+  <div class="entries-table-wrap">
+    <table class="entries-table">
+      <thead>
+        <tr><th></th><th>Player</th><th>Rank</th><th>Reason</th><th>Links</th><th>Admin</th></tr>
+      </thead>
+      <tbody id="list"></tbody>
+    </table>
+  </div>
   <div id="empty-state" style="display:none;">NO ENTRIES FOUND</div>
 
 
@@ -639,6 +642,15 @@ const FIREBASE_CONFIG = {
 const HENRIK_API_KEY = "HDEV-3e1b5dcb-80ca-402c-8202-dec975c2dc5f";
 
 /* ============================================================
+   AUDIT LOG OWNER
+   Only this account can see the activity log (who added,
+   verified, or deleted entries). Other admins can't view it,
+   even though they can still perform those actions themselves.
+   Enforced in Firestore rules too, not just hidden in the page.
+   ============================================================ */
+const OWNER_EMAIL = "vaticseed@dodgelist.local";
+
+/* ============================================================
    SCREENSHOT UPLOADS (optional)
    Uses Cloudinary's free "unsigned upload" feature, built
    specifically for direct browser uploads (real CORS support,
@@ -654,7 +666,7 @@ const CLOUDINARY_CLOUD_NAME = "hmi1kjrf";
 const CLOUDINARY_UPLOAD_PRESET = "dodge-list";
 
 let useFirebase = false;
-let db, collection, addDoc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy;
+let db, collection, addDoc, setDoc, getDoc, getDocs, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy;
 let auth, signInWithEmailAndPassword, signOut, onAuthStateChanged;
 let isAdmin = false;
 
@@ -665,7 +677,7 @@ if (FIREBASE_CONFIG) {
     const authLib = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
     const firebaseApp = app.initializeApp(FIREBASE_CONFIG);
     db = fs.getFirestore(firebaseApp);
-    collection = fs.collection; addDoc = fs.addDoc; setDoc = fs.setDoc; getDoc = fs.getDoc; onSnapshot = fs.onSnapshot;
+    collection = fs.collection; addDoc = fs.addDoc; setDoc = fs.setDoc; getDoc = fs.getDoc; getDocs = fs.getDocs; onSnapshot = fs.onSnapshot;
     updateDoc = fs.updateDoc; deleteDoc = fs.deleteDoc; doc = fs.doc; query = fs.query; orderBy = fs.orderBy;
     auth = authLib.getAuth(firebaseApp);
     signInWithEmailAndPassword = authLib.signInWithEmailAndPassword;
@@ -679,6 +691,8 @@ if (FIREBASE_CONFIG) {
       document.getElementById('admin-btn-label').textContent = isAdmin ? 'Admin ✓' : 'Admin';
       document.getElementById('admin-toggle-btn').classList.toggle('is-admin', isAdmin);
       document.getElementById('manage-protected-btn').style.display = isAdmin ? 'flex' : 'none';
+      const isOwner = isAdmin && user.email === OWNER_EMAIL;
+      document.getElementById('view-logs-btn').style.display = isOwner ? 'flex' : 'none';
       document.getElementById('tab-pending').style.display = isAdmin ? 'inline-block' : 'none';
       if (!isAdmin && activeTab === 'pending') {
         activeTab = 'cheater';
@@ -688,6 +702,7 @@ if (FIREBASE_CONFIG) {
       if (!isAdmin) {
         document.getElementById('add-panel').classList.remove('open');
         document.getElementById('protected-panel').classList.remove('open');
+        document.getElementById('logs-panel').classList.remove('open');
       }
       render();
     });
@@ -777,14 +792,11 @@ function render(){
   emptyEl.style.display = filtered.length ? 'none' : 'block';
 
   filtered.forEach(e => {
-    const card = document.createElement('div');
-    card.className = 'entry' + (!e.verified ? ' pending' : '') + (e.pinned ? ' pinned' : '');
-    const badge = e.verified
-      ? '<span class="badge verified-badge">Verified</span>'
-      : '<span class="badge pending-badge">Unverified</span>';
-    const pinBadge = e.pinned ? '<span class="badge pinned-badge">📌 Pinned</span>' : '';
+    const row = document.createElement('tr');
+    row.className = 'entry-row' + (e.pinned ? ' pinned' : '');
+
     const listBadge = activeTab === 'pending'
-      ? `<span class="badge">${(e.type || 'dodge') === 'cheater' ? 'Cheaters' : 'Dodge List'}</span>`
+      ? `<span class="list-tag">${(e.type || 'dodge') === 'cheater' ? 'Cheaters' : 'Dodge List'}</span>`
       : '';
 
     let rankIconHtml = '';
@@ -804,40 +816,39 @@ function render(){
     const vtlName = encodeURIComponent(e.username).replace(/%20/g, '+');
     const vtlUrl = `https://vtl.lol/id/${vtlName}_${encodeURIComponent(e.tag)}`;
 
-    card.innerHTML = `
-      <div class="entry-top">
+    const evidenceHtml = e.imageUrl ? `
+      <img class="evidence-thumb" src="${e.imageUrl}" alt="Screenshot" data-action="view-screenshot" data-url="${e.imageUrl}" title="Click to view full screenshot">
+      ${isAdmin ? `<span class="remove-ss-link" data-action="remove-screenshot" data-id="${e.id}">Remove Screenshot</span>` : ''}
+    ` : '';
+
+    row.innerHTML = `
+      <td class="pin-cell">${e.pinned ? '📌' : ''}</td>
+      <td>
         <div class="tag"><bdi>${escapeHtml(e.username)}</bdi><span class="hash">#</span><bdi>${escapeHtml(e.tag)}</bdi></div>
-        <div class="entry-top-right">
-          ${listBadge}
-          ${pinBadge}
-          ${badge}
-          ${rankIconHtml}
-        </div>
-      </div>
-      ${e.reason || isAdmin ? `
-        <div class="reason-row">
-          ${isAdmin ? `<span class="edit-reason-btn" data-action="edit-reason" data-id="${e.id}" title="Edit description">✎</span>` : ''}
-          <div class="reason">${e.reason ? escapeHtml(e.reason) : (isAdmin ? '<span style="color:var(--text-dim);font-style:italic;">No description</span>' : '')}</div>
-        </div>
-      ` : ''}
-      ${e.imageUrl ? `
-        <a href="${e.imageUrl}" target="_blank" rel="noopener noreferrer"><img class="entry-evidence" src="${e.imageUrl}" alt="Screenshot"></a>
-        ${isAdmin ? `<div style="margin-top:5px;"><span data-action="remove-screenshot" data-id="${e.id}" style="cursor:pointer;color:var(--text-dim);font-size:11px;font-family:'JetBrains Mono',monospace;">Remove Screenshot</span></div>` : ''}
-      ` : ''}
-      <div class="meta-row">
-        <span class="profile-links">
-          <a href="${trackerUrl}" target="_blank" rel="noopener noreferrer">tracker.gg</a>
-          <a href="${vtlUrl}" target="_blank" rel="noopener noreferrer">vtl.lol</a>
-        </span>
-        <span class="meta-actions">
-          ${rankAction}
-          ${isAdmin ? `<span data-action="pin" data-id="${e.id}" style="color:#facc15;">${e.pinned ? 'Unpin' : 'Pin'}</span>` : ''}
-          ${isAdmin && !e.verified ? `<span data-action="verify" data-id="${e.id}" style="color:#4ade80;">Verify</span>` : ''}
-          ${isAdmin ? `<span data-action="delete" data-id="${e.id}" style="color:var(--accent);">Delete</span>` : ''}
-        </span>
-      </div>
+        ${listBadge}
+      </td>
+      <td>${rankIconHtml}</td>
+      <td class="reason-cell">
+        ${e.reason || isAdmin ? `
+          <div class="reason-row">
+            ${isAdmin ? `<span class="edit-reason-btn" data-action="edit-reason" data-id="${e.id}" title="Edit description">✎</span>` : ''}
+            <span class="reason">${e.reason ? escapeHtml(e.reason) : (isAdmin ? '<span style="color:var(--text-dim);font-style:italic;">No description</span>' : '')}</span>
+          </div>
+        ` : ''}
+        ${evidenceHtml}
+      </td>
+      <td class="links-cell">
+        <a href="${trackerUrl}" target="_blank" rel="noopener noreferrer">tracker.gg</a>
+        <a href="${vtlUrl}" target="_blank" rel="noopener noreferrer">vtl.lol</a>
+      </td>
+      <td class="admin-cell">
+        ${rankAction}
+        ${isAdmin ? `<span data-action="pin" data-id="${e.id}" style="color:#facc15;">${e.pinned ? 'Unpin' : 'Pin'}</span>` : ''}
+        ${isAdmin && !e.verified ? `<span data-action="verify" data-id="${e.id}" style="color:#4ade80;">Verify</span>` : ''}
+        ${isAdmin ? `<span data-action="delete" data-id="${e.id}" style="color:var(--accent);">Delete</span>` : ''}
+      </td>
     `;
-    listEl.appendChild(card);
+    listEl.appendChild(row);
   });
 
   listEl.querySelectorAll('[data-action="delete"]').forEach(el=>{
@@ -857,6 +868,9 @@ function render(){
   });
   listEl.querySelectorAll('[data-action="edit-reason"]').forEach(el=>{
     el.addEventListener('click', ()=> editReason(el.getAttribute('data-id')));
+  });
+  listEl.querySelectorAll('[data-action="view-screenshot"]').forEach(el=>{
+    el.addEventListener('click', ()=> window.open(el.getAttribute('data-url'), '_blank', 'noopener,noreferrer'));
   });
 }
 
@@ -954,6 +968,22 @@ function renderProtectedList(){
 
 class ProtectedAccountError extends Error {}
 
+async function logAction(action, entryData){
+  if (!useFirebase) return; // no meaningful log in local demo mode
+  try {
+    await addDoc(collection(db, 'audit_log'), {
+      action,
+      username: entryData.username || '',
+      tag: entryData.tag || '',
+      type: entryData.type || 'dodge',
+      performedBy: auth.currentUser ? auth.currentUser.email : 'public',
+      timestamp: Date.now(),
+    });
+  } catch (e) {
+    console.warn('Could not write audit log entry:', e.message);
+  }
+}
+
 async function addEntry(entry){
   if (isProtectedAccount(entry.username, entry.tag)) throw new ProtectedAccountError();
   entry.createdAt = Date.now();
@@ -965,6 +995,7 @@ async function addEntry(entry){
     const existing = await getDoc(ref);
     if (existing.exists()) throw new DuplicateEntryError();
     await setDoc(ref, entry);
+    logAction('add', entry);
     return key;
   } else {
     const dupe = entries.some(e => duplicateKey(e.type || 'dodge', e.username, e.tag) === key);
@@ -980,7 +1011,9 @@ async function addEntry(entry){
 async function deleteEntry(id){
   if (!confirm('Delete this entry permanently?')) return;
   if (useFirebase) {
+    const target = entries.find(e => e.id === id);
     await deleteDoc(doc(db, 'entries', id));
+    if (target) logAction(target.verified ? 'delete' : 'deny', target);
   } else {
     entries = entries.filter(e => e.id !== id);
     saveLocal(entries);
@@ -992,6 +1025,8 @@ async function verifyEntry(id){
   if (!isAdmin) return;
   if (useFirebase) {
     await updateDoc(doc(db, 'entries', id), { verified: true });
+    const target = entries.find(e => e.id === id);
+    if (target) logAction('verify', target);
   } else {
     const target = entries.find(e => e.id === id);
     if (target) target.verified = true;
@@ -1295,9 +1330,10 @@ document.getElementById('admin-cancel').addEventListener('click', ()=>{
   adminDropdown.classList.remove('open');
 });
 document.getElementById('admin-login-btn').addEventListener('click', async ()=>{
-  const email = document.getElementById('admin-email').value.trim();
+  const username = document.getElementById('admin-email').value.trim().toLowerCase();
   const password = document.getElementById('admin-password').value;
-  if (!email || !password) { alert('Enter email and password.'); return; }
+  if (!username || !password) { alert('Enter username and password.'); return; }
+  const email = username.includes('@') ? username : `${username}@dodgelist.local`;
   try {
     await signInWithEmailAndPassword(auth, email, password);
     document.getElementById('admin-password').value = '';
@@ -1334,11 +1370,57 @@ document.getElementById('protected-add-btn').addEventListener('click', async ()=
   }
 });
 
+const logsPanel = document.getElementById('logs-panel');
+
+function formatLogTime(ts){
+  if (!ts) return '';
+  const d = new Date(ts);
+  return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+const ACTION_LABELS = { add: 'Added', verify: 'Verified', delete: 'Deleted', deny: 'Denied' };
+const ACTION_COLORS = { add: 'var(--info)', verify: 'var(--good)', delete: 'var(--accent)', deny: 'var(--gold)' };
+
+async function loadAndRenderLogs(){
+  const el = document.getElementById('logs-list-ui');
+  el.innerHTML = `<p class="sub" style="margin:0;">Loading...</p>`;
+  if (!useFirebase) { el.innerHTML = `<p class="sub" style="margin:0;">Not available in local mode.</p>`; return; }
+  try {
+    const q = query(collection(db, 'audit_log'), orderBy('timestamp', 'desc'));
+    const snap = await getDocs(q);
+    const logs = snap.docs.map(d => d.data());
+    if (!logs.length) { el.innerHTML = `<p class="sub" style="margin:0;">No activity yet.</p>`; return; }
+    el.innerHTML = logs.slice(0, 200).map(l => `
+      <div style="padding:7px 0;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;">
+        <span style="color:${ACTION_COLORS[l.action] || 'var(--text-dim)'};font-weight:700;">${ACTION_LABELS[l.action] || l.action}</span>
+        <span> ${escapeHtml(l.username)}<span style="color:var(--accent);">#</span>${escapeHtml(l.tag)}</span>
+        <span style="color:var(--text-dim);"> (${l.type === 'cheater' ? 'Cheaters' : 'Dodge List'})</span>
+        <div style="color:var(--text-dim);font-size:11px;margin-top:2px;">by ${escapeHtml(l.performedBy || 'unknown')} &middot; ${formatLogTime(l.timestamp)}</div>
+      </div>
+    `).join('');
+  } catch (e) {
+    el.innerHTML = `<p class="sub" style="margin:0;color:var(--accent);">Could not load logs: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+document.getElementById('view-logs-btn').addEventListener('click', (ev)=>{
+  ev.stopPropagation();
+  adminDropdown.classList.remove('open');
+  logsPanel.classList.toggle('open');
+  if (logsPanel.classList.contains('open')) loadAndRenderLogs();
+});
+document.getElementById('logs-close').addEventListener('click', ()=>{
+  logsPanel.classList.remove('open');
+});
+document.getElementById('logs-refresh-btn').addEventListener('click', loadAndRenderLogs);
+
 document.addEventListener('click', (ev)=>{
   const adminCorner = document.getElementById('admin-login-corner');
   if (adminCorner && !adminCorner.contains(ev.target)) adminDropdown.classList.remove('open');
   const protectedWrap = document.getElementById('protected-panel-wrap');
   if (protectedWrap && !protectedWrap.contains(ev.target)) protectedPanel.classList.remove('open');
+  const logsWrap = document.getElementById('logs-panel-wrap');
+  if (logsWrap && !logsWrap.contains(ev.target)) logsPanel.classList.remove('open');
 });
 </script>
 </body>
