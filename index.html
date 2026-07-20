@@ -439,6 +439,16 @@
   .admin-dropdown.open{display:block;}
   #protected-panel{position:static;}
   #logs-panel{position:static;}
+  #logs-backdrop{
+    display:none;
+    position:fixed;inset:0;
+    background:rgba(0,0,0,0.6);
+    z-index:99;
+  }
+  #logs-backdrop.open{display:block;}
+  #logs-panel-wrap{z-index:101;}
+  #logs-panel-wrap #logs-panel.open{max-height:80vh;display:flex;flex-direction:column;}
+  #logs-list-ui{flex:1;}
   #protected-list-ui{max-height:220px;overflow-y:auto;}
   .admin-dropdown h3{
     font-family:'Oswald',sans-serif;
@@ -510,7 +520,8 @@
   </div>
 </div>
 
-<div class="admin-corner" id="logs-panel-wrap" style="left:auto;right:16px;top:70px;">
+<div id="logs-backdrop"></div>
+<div class="admin-corner" id="logs-panel-wrap" style="left:50%;top:50%;transform:translate(-50%,-50%);">
   <div class="admin-dropdown" id="logs-panel" style="width:360px;">
     <h3>Activity Log</h3>
     <p class="sub">Only visible to you. Shows who added, verified, or removed entries.</p>
@@ -1404,14 +1415,21 @@ async function loadAndRenderLogs(){
   }
 }
 
+const logsBackdrop = document.getElementById('logs-backdrop');
 document.getElementById('view-logs-btn').addEventListener('click', (ev)=>{
   ev.stopPropagation();
   adminDropdown.classList.remove('open');
   logsPanel.classList.toggle('open');
+  logsBackdrop.classList.toggle('open', logsPanel.classList.contains('open'));
   if (logsPanel.classList.contains('open')) loadAndRenderLogs();
 });
 document.getElementById('logs-close').addEventListener('click', ()=>{
   logsPanel.classList.remove('open');
+  logsBackdrop.classList.remove('open');
+});
+logsBackdrop.addEventListener('click', ()=>{
+  logsPanel.classList.remove('open');
+  logsBackdrop.classList.remove('open');
 });
 document.getElementById('logs-refresh-btn').addEventListener('click', loadAndRenderLogs);
 
