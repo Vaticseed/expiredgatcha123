@@ -663,9 +663,6 @@ const HENRIK_API_KEY = "HDEV-3e1b5dcb-80ca-402c-8202-dec975c2dc5f";
    ============================================================ */
 const LOG_VIEWER_EMAILS = [
   "vaticseed@dodgelist.local",
-  "lovewnl@dodgelist.local",
-  "gratings@dodgelist.local",
-  "benjy@dodgelist.local",
 ];
 
 /* ============================================================
@@ -1413,7 +1410,7 @@ async function loadAndRenderLogs(){
         <span style="color:${ACTION_COLORS[l.action] || 'var(--text-dim)'};font-weight:700;">${ACTION_LABELS[l.action] || l.action}</span>
         <span> ${escapeHtml(l.username)}<span style="color:var(--accent);">#</span>${escapeHtml(l.tag)}</span>
         <span style="color:var(--text-dim);"> (${l.type === 'cheater' ? 'Cheaters' : 'Dodge List'})</span>
-        <div style="color:var(--text-dim);font-size:11px;margin-top:2px;">by ${escapeHtml(l.performedBy || 'unknown')} &middot; ${formatLogTime(l.timestamp)}</div>
+        <div style="color:var(--text-dim);font-size:11px;margin-top:2px;">by ${escapeHtml((l.performedBy || 'unknown').split('@')[0])} &middot; ${formatLogTime(l.timestamp)}</div>
       </div>
     `).join('');
   } catch (e) {
