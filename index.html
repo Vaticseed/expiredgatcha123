@@ -338,6 +338,12 @@
     padding:2px 6px;
     width:fit-content;
   }
+  .added-when{
+    margin-top:4px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:10.5px;
+    color:var(--text-dim);
+  }
   .reason-cell{max-width:340px;}
   .reason-row{display:flex;align-items:flex-start;gap:8px;}
   .reason{color:var(--text-muted);font-size:12.5px;line-height:1.5;flex:1;}
@@ -735,7 +741,7 @@ function saveLocal(entries){ localStorage.setItem(LOCAL_KEY, JSON.stringify(entr
    Edit this list to add/remove who shows up as an admin to
    contact. Just add or remove names in the array below.
    ============================================================ */
-const ADMIN_DISCORDS = ['lovewnl'];
+const ADMIN_DISCORDS = ['lovewnl', 'benjyvv'];
 
 const adminDiscordRow = document.getElementById('admin-discord-row');
 adminDiscordRow.innerHTML = ADMIN_DISCORDS.map(name => `<span class="discord-pill">${escapeHtml(name)}</span>`).join('');
@@ -813,6 +819,9 @@ function render(){
     const listBadge = activeTab === 'pending'
       ? `<span class="list-tag">${(e.type || 'dodge') === 'cheater' ? 'Cheaters' : 'Dodge List'}</span>`
       : '';
+    const addedWhen = isAdmin && e.createdAt
+      ? `<div class="added-when">Added ${formatLogTime(e.createdAt)}</div>`
+      : '';
 
     let rankIconHtml = '';
     let rankAction = '';
@@ -841,6 +850,7 @@ function render(){
       <td>
         <div class="tag"><bdi>${escapeHtml(e.username)}</bdi><span class="hash">#</span><bdi>${escapeHtml(e.tag)}</bdi></div>
         ${listBadge}
+        ${addedWhen}
       </td>
       <td>${rankIconHtml}</td>
       <td class="reason-cell">
