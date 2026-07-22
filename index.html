@@ -622,7 +622,7 @@
   <div class="entries-table-wrap">
     <table class="entries-table">
       <thead>
-        <tr><th></th><th>Player</th><th>Rank</th><th>Reason</th><th>Links</th><th>Admin</th></tr>
+        <tr><th></th><th>Player</th><th>Rank</th><th>Reason</th><th>Links</th><th id="admin-col-header">Admin</th></tr>
       </thead>
       <tbody id="list"></tbody>
     </table>
@@ -768,6 +768,7 @@ function render(){
   const listEl = document.getElementById('list');
   const emptyEl = document.getElementById('empty-state');
   const q = document.getElementById('search').value.trim().toLowerCase();
+  document.getElementById('admin-col-header').style.display = isAdmin ? 'table-cell' : 'none';
 
   const pendingCount = entries.filter(e => !e.verified).length;
   const pendingBadge = document.getElementById('pending-count-badge');
@@ -866,7 +867,7 @@ function render(){
         <a href="${trackerUrl}" target="_blank" rel="noopener noreferrer">tracker.gg</a>
         <a href="${vtlUrl}" target="_blank" rel="noopener noreferrer">vtl.lol</a>
       </td>
-      <td class="admin-cell">
+      <td class="admin-cell" style="${isAdmin ? '' : 'display:none;'}">
         ${rankAction}
         ${isAdmin ? `<span data-action="pin" data-id="${e.id}" style="color:#facc15;">${e.pinned ? 'Unpin' : 'Pin'}</span>` : ''}
         ${isAdmin && !e.verified ? `<span data-action="verify" data-id="${e.id}" style="color:#4ade80;">Verify</span>` : ''}
