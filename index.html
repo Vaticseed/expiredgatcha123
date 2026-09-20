@@ -831,7 +831,7 @@ function render(){
       if (rankLoadingIds.has(e.id)) {
         rankAction = `<span class="rank-tag">Checking...</span>`;
       } else if (e.rank) {
-        if (e.rankImage) rankIconHtml = `<img class="rank-icon-large" src="${escapeHtml(e.rankImage)}" alt="${escapeHtml(e.rank)}" title="${escapeHtml(e.rank)}">`;
+        if (safeImg(e.rankImage)) rankIconHtml = `<img class="rank-icon-large" src="${escapeHtml(safeImg(e.rankImage))}" alt="${escapeHtml(e.rank)}" title="${escapeHtml(e.rank)}">`;
         if (isAdmin) rankAction = `<span data-action="check-rank" data-id="${escapeHtml(e.id)}" style="color:var(--text-dim);">Refresh</span>`;
       } else if (isAdmin) {
         rankAction = `<span data-action="check-rank" data-id="${escapeHtml(e.id)}" style="color:var(--cyan);">Check Rank</span>`;
@@ -842,8 +842,8 @@ function render(){
     const vtlName = encodeURIComponent(e.username).replace(/%20/g, '+');
     const vtlUrl = `https://vtl.lol/id/${vtlName}_${encodeURIComponent(e.tag)}`;
 
-    const evidenceHtml = e.imageUrl ? `
-      <img class="evidence-thumb" src="${escapeHtml(e.imageUrl)}" alt="Screenshot" data-action="view-screenshot" data-url="${escapeHtml(e.imageUrl)}" title="Click to view full screenshot">
+    const evidenceHtml = safeImg(e.imageUrl) ? `
+      <img class="evidence-thumb" src="${escapeHtml(safeImg(e.imageUrl))}" alt="Screenshot" data-action="view-screenshot" data-url="${escapeHtml(safeImg(e.imageUrl))}" title="Click to view full screenshot">
       ${isAdmin ? `<span class="remove-ss-link" data-action="remove-screenshot" data-id="${escapeHtml(e.id)}">Remove Screenshot</span>` : ''}
     ` : '';
 
@@ -899,6 +899,10 @@ function render(){
   listEl.querySelectorAll('[data-action="view-screenshot"]').forEach(el=>{
     el.addEventListener('click', ()=> window.open(el.getAttribute('data-url'), '_blank', 'noopener,noreferrer'));
   });
+}
+
+function safeImg(u){
+  return (typeof u === 'string' && /^https:\/\/(res\.cloudinary\.com|media\.valorant-api\.com)\//.test(u)) ? u : '';
 }
 
 function escapeHtml(str){
