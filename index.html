@@ -996,14 +996,21 @@ class ProtectedAccountError extends Error {}
 async function logAction(action, entryData){
   if (!useFirebase) return; // no meaningful log in local demo mode
   try {
-    await addDoc(collection(db, 'audit_log'), {
+    const record = {
       action,
       username: entryData.username || '',
       tag: entryData.tag || '',
       type: entryData.type || 'dodge',
       performedBy: auth.currentUser ? auth.currentUser.email : 'public',
       timestamp: Date.now(),
-    });
+    };
+    if (entryData.id) record.entryId = entryData.id;
+    if (action === 'delete' || action === 'deny') {
+      // full copy of the entry so it can be restored later from the log
+      const { id, ...rest } = entryData;
+      record.snapshot = JSON.parse(JSON.stringify(rest));
+    }
+    await addDoc(collection(db, 'audit_log'), record);
   } catch (e) {
     console.warn('Could not write audit log entry:', e.message);
   }
@@ -1403,8 +1410,36 @@ function formatLogTime(ts){
   return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 }
 
-const ACTION_LABELS = { add: 'Added', verify: 'Verified', delete: 'Deleted', deny: 'Denied' };
-const ACTION_COLORS = { add: 'var(--info)', verify: 'var(--good)', delete: 'var(--accent)', deny: 'var(--gold)' };
+const ACTION_LABELS = { add: 'Added', verify: 'Verified', delete: 'Deleted', deny: 'Denied', restore: 'Restored' };
+const ACTION_COLORS = { add: 'var(--info)', verify: 'var(--good)', delete: 'var(--accent)', deny: 'var(--gold)', restore: 'var(--good)' };
+
+let logCache = {};
+
+async function undoDelete(logId){
+  const isOwner = isAdmin && auth.currentUser && LOG_VIEWER_EMAILS.includes(auth.currentUser.email);
+  if (!isOwner) return;
+  const l = logCache[logId];
+  if (!l) return;
+  try {
+    const id = l.entryId || duplicateKey(l.type || 'dodge', l.username, l.tag);
+    const ref = doc(db, 'entries', id);
+    if ((await getDoc(ref)).exists()) { alert('This entry is already back on the list.'); return; }
+    let data;
+    if (l.snapshot) {
+      if (!confirm(`Restore ${l.username}#${l.tag}?`)) return;
+      data = l.snapshot;
+    } else {
+      if (!confirm(`Restore ${l.username}#${l.tag}? This is an older log, so the reason and screenshot can't be recovered, only the name.`)) return;
+      data = { username: l.username, tag: l.tag, reason: '', type: l.type || 'dodge', verified: l.action === 'delete', createdAt: Date.now() };
+    }
+    await setDoc(ref, data);
+    logAction('restore', { username: l.username, tag: l.tag, type: l.type });
+    alert(`${l.username}#${l.tag} restored.`);
+    loadAndRenderLogs();
+  } catch (e) {
+    alert('Could not restore: ' + e.message);
+  }
+}
 
 async function loadAndRenderLogs(){
   const el = document.getElementById('logs-list-ui');
@@ -1413,16 +1448,20 @@ async function loadAndRenderLogs(){
   try {
     const q = query(collection(db, 'audit_log'), orderBy('timestamp', 'desc'));
     const snap = await getDocs(q);
-    const logs = snap.docs.map(d => d.data());
+    logCache = {};
+    const logs = snap.docs.map(d => { const o = { _id: d.id, ...d.data() }; logCache[d.id] = o; return o; });
     if (!logs.length) { el.innerHTML = `<p class="sub" style="margin:0;">No activity yet.</p>`; return; }
     el.innerHTML = logs.slice(0, 200).map(l => `
       <div style="padding:7px 0;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;">
         <span style="color:${ACTION_COLORS[l.action] || 'var(--text-dim)'};font-weight:700;">${escapeHtml(ACTION_LABELS[l.action] || l.action)}</span>
         <span> ${escapeHtml(l.username)}<span style="color:var(--accent);">#</span>${escapeHtml(l.tag)}</span>
         <span style="color:var(--text-dim);"> (${l.type === 'cheater' ? 'Cheaters' : 'Dodge List'})</span>
-        <div style="color:var(--text-dim);font-size:11px;margin-top:2px;">by ${escapeHtml((l.performedBy || 'unknown').split('@')[0])} &middot; ${formatLogTime(l.timestamp)}</div>
+        <div style="color:var(--text-dim);font-size:11px;margin-top:2px;">by ${escapeHtml((l.performedBy || 'unknown').split('@')[0])} &middot; ${formatLogTime(l.timestamp)}${(l.action === 'delete' || l.action === 'deny') ? ` &middot; <span data-undo-log="${escapeHtml(l._id)}" style="cursor:pointer;color:var(--good);font-weight:700;">Undo</span>` : ''}</div>
       </div>
     `).join('');
+    el.querySelectorAll('[data-undo-log]').forEach(btn => {
+      btn.addEventListener('click', () => undoDelete(btn.getAttribute('data-undo-log')));
+    });
   } catch (e) {
     el.innerHTML = `<p class="sub" style="margin:0;color:var(--accent);">Could not load logs: ${escapeHtml(e.message)}</p>`;
   }
