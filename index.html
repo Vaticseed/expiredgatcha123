@@ -705,8 +705,9 @@ if (FIREBASE_CONFIG) {
     signOut = authLib.signOut;
     onAuthStateChanged = authLib.onAuthStateChanged;
     useFirebase = true;
-    onAuthStateChanged(auth, (user) => {
-      isAdmin = !!user;
+    onAuthStateChanged(auth, async (user) => {
+      const claims = user ? (await user.getIdTokenResult(true)).claims : {};
+      isAdmin = !!claims.admin;
       document.getElementById('admin-login-fields').style.display = isAdmin ? 'none' : 'block';
       document.getElementById('admin-logged-in').style.display = isAdmin ? 'block' : 'none';
       document.getElementById('admin-btn-label').textContent = isAdmin ? 'Admin ✓' : 'Admin';
@@ -830,10 +831,10 @@ function render(){
       if (rankLoadingIds.has(e.id)) {
         rankAction = `<span class="rank-tag">Checking...</span>`;
       } else if (e.rank) {
-        if (e.rankImage) rankIconHtml = `<img class="rank-icon-large" src="${e.rankImage}" alt="${escapeHtml(e.rank)}" title="${escapeHtml(e.rank)}">`;
-        if (isAdmin) rankAction = `<span data-action="check-rank" data-id="${e.id}" style="color:var(--text-dim);">Refresh</span>`;
+        if (e.rankImage) rankIconHtml = `<img class="rank-icon-large" src="${escapeHtml(e.rankImage)}" alt="${escapeHtml(e.rank)}" title="${escapeHtml(e.rank)}">`;
+        if (isAdmin) rankAction = `<span data-action="check-rank" data-id="${escapeHtml(e.id)}" style="color:var(--text-dim);">Refresh</span>`;
       } else if (isAdmin) {
-        rankAction = `<span data-action="check-rank" data-id="${e.id}" style="color:var(--cyan);">Check Rank</span>`;
+        rankAction = `<span data-action="check-rank" data-id="${escapeHtml(e.id)}" style="color:var(--cyan);">Check Rank</span>`;
       }
     }
 
@@ -842,8 +843,8 @@ function render(){
     const vtlUrl = `https://vtl.lol/id/${vtlName}_${encodeURIComponent(e.tag)}`;
 
     const evidenceHtml = e.imageUrl ? `
-      <img class="evidence-thumb" src="${e.imageUrl}" alt="Screenshot" data-action="view-screenshot" data-url="${e.imageUrl}" title="Click to view full screenshot">
-      ${isAdmin ? `<span class="remove-ss-link" data-action="remove-screenshot" data-id="${e.id}">Remove Screenshot</span>` : ''}
+      <img class="evidence-thumb" src="${escapeHtml(e.imageUrl)}" alt="Screenshot" data-action="view-screenshot" data-url="${escapeHtml(e.imageUrl)}" title="Click to view full screenshot">
+      ${isAdmin ? `<span class="remove-ss-link" data-action="remove-screenshot" data-id="${escapeHtml(e.id)}">Remove Screenshot</span>` : ''}
     ` : '';
 
     row.innerHTML = `
@@ -857,7 +858,7 @@ function render(){
       <td class="reason-cell">
         ${e.reason || isAdmin ? `
           <div class="reason-row">
-            ${isAdmin ? `<span class="edit-reason-btn" data-action="edit-reason" data-id="${e.id}" title="Edit description">✎</span>` : ''}
+            ${isAdmin ? `<span class="edit-reason-btn" data-action="edit-reason" data-id="${escapeHtml(e.id)}" title="Edit description">✎</span>` : ''}
             <span class="reason">${e.reason ? escapeHtml(e.reason) : (isAdmin ? '<span style="color:var(--text-dim);font-style:italic;">No description</span>' : '')}</span>
           </div>
         ` : ''}
@@ -869,9 +870,9 @@ function render(){
       </td>
       <td class="admin-cell" style="${isAdmin ? '' : 'display:none;'}">
         ${rankAction}
-        ${isAdmin ? `<span data-action="pin" data-id="${e.id}" style="color:#facc15;">${e.pinned ? 'Unpin' : 'Pin'}</span>` : ''}
-        ${isAdmin && !e.verified ? `<span data-action="verify" data-id="${e.id}" style="color:#4ade80;">Verify</span>` : ''}
-        ${isAdmin ? `<span data-action="delete" data-id="${e.id}" style="color:var(--accent);">Delete</span>` : ''}
+        ${isAdmin ? `<span data-action="pin" data-id="${escapeHtml(e.id)}" style="color:#facc15;">${e.pinned ? 'Unpin' : 'Pin'}</span>` : ''}
+        ${isAdmin && !e.verified ? `<span data-action="verify" data-id="${escapeHtml(e.id)}" style="color:#4ade80;">Verify</span>` : ''}
+        ${isAdmin ? `<span data-action="delete" data-id="${escapeHtml(e.id)}" style="color:var(--accent);">Delete</span>` : ''}
       </td>
     `;
     listEl.appendChild(row);
@@ -901,9 +902,7 @@ function render(){
 }
 
 function escapeHtml(str){
-  const d = document.createElement('div');
-  d.textContent = str ?? '';
-  return d.innerHTML;
+  return String(str ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
 
 function hashPart(str){
@@ -984,7 +983,7 @@ function renderProtectedList(){
   el.innerHTML = protectedAccounts.map(p => `
     <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12.5px;">
       <span>${escapeHtml(p.username)}<span style="color:var(--accent);">#</span>${escapeHtml(p.tag)}</span>
-      <span data-remove-protected="${p.id}" style="cursor:pointer;color:var(--accent);font-size:11px;">Remove</span>
+      <span data-remove-protected="${escapeHtml(p.id)}" style="cursor:pointer;color:var(--accent);font-size:11px;">Remove</span>
     </div>
   `).join('');
   el.querySelectorAll('[data-remove-protected]').forEach(elm => {
@@ -1418,7 +1417,7 @@ async function loadAndRenderLogs(){
     if (!logs.length) { el.innerHTML = `<p class="sub" style="margin:0;">No activity yet.</p>`; return; }
     el.innerHTML = logs.slice(0, 200).map(l => `
       <div style="padding:7px 0;border-bottom:1px solid var(--line);font-family:'JetBrains Mono',monospace;font-size:12px;">
-        <span style="color:${ACTION_COLORS[l.action] || 'var(--text-dim)'};font-weight:700;">${ACTION_LABELS[l.action] || l.action}</span>
+        <span style="color:${ACTION_COLORS[l.action] || 'var(--text-dim)'};font-weight:700;">${escapeHtml(ACTION_LABELS[l.action] || l.action)}</span>
         <span> ${escapeHtml(l.username)}<span style="color:var(--accent);">#</span>${escapeHtml(l.tag)}</span>
         <span style="color:var(--text-dim);"> (${l.type === 'cheater' ? 'Cheaters' : 'Dodge List'})</span>
         <div style="color:var(--text-dim);font-size:11px;margin-top:2px;">by ${escapeHtml((l.performedBy || 'unknown').split('@')[0])} &middot; ${formatLogTime(l.timestamp)}</div>
