@@ -741,7 +741,7 @@ function saveLocal(entries){ localStorage.setItem(LOCAL_KEY, JSON.stringify(entr
    Edit this list to add/remove who shows up as an admin to
    contact. Just add or remove names in the array below.
    ============================================================ */
-const ADMIN_DISCORDS = ['lovewnl'];
+const ADMIN_DISCORDS = ['lovevl'];
 
 const adminDiscordRow = document.getElementById('admin-discord-row');
 adminDiscordRow.innerHTML = ADMIN_DISCORDS.map(name => `<span class="discord-pill">${escapeHtml(name)}</span>`).join('');
