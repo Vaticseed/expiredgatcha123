@@ -1,0 +1,88 @@
+rules_version = '2';
+
+// Paste this into Firebase console -> Firestore Database -> Rules -> Publish.
+// The page's JavaScript can be bypassed by anyone with the public config,
+// so these rules are the only thing that actually stops spam.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAdmin() {
+      return request.auth != null && request.auth.token.admin == true;
+    }
+    // keep in sync with LOG_VIEWER_EMAILS in index.html
+    function isOwner() {
+      return isAdmin() && request.auth.token.email in ['vaticseed@dodgelist.local'];
+    }
+    // same as normalizePart() in index.html
+    function norm(s) {
+      return s.trim().lower().replace(' +', ' ');
+    }
+    function notProtected(d) {
+      return !exists(/databases/$(database)/documents/protected/$(norm(d.username) + '::' + norm(d.tag)));
+    }
+    function optString(d, k, max) {
+      return !(k in d) || d[k] == null || (d[k] is string && d[k].size() <= max);
+    }
+    function optNumber(d, k) {
+      return !(k in d) || d[k] is number;
+    }
+
+    // All a logged-out visitor may submit: one small, unverified report.
+    function validReport(d) {
+      return d.keys().hasOnly(['username', 'tag', 'reason', 'type', 'verified', 'createdAt',
+                               'rank', 'rankImage', 'rankTier', 'rankCheckedAt', 'imageUrl'])
+        && d.verified == false
+        && d.type in ['dodge', 'cheater']
+        && d.username is string && d.username.size() > 0 && d.username.size() <= 40
+        && d.tag is string && d.tag.size() > 0 && d.tag.size() <= 10
+        && d.createdAt is number
+        && optString(d, 'reason', 500)
+        && optString(d, 'rank', 40)
+        && optNumber(d, 'rankTier')
+        && optNumber(d, 'rankCheckedAt')
+        && (!('imageUrl' in d)
+            || (d.imageUrl is string && d.imageUrl.matches('https://res\\.cloudinary\\.com/hmi1kjrf/[A-Za-z0-9_/.\\-]+')))
+        && (!('rankImage' in d) || d.rankImage == null
+            || (d.rankImage is string && d.rankImage.matches('https://media\\.valorant-api\\.com/[A-Za-z0-9_/.\\-]+')));
+    }
+
+    // Public reports must be written in the same batch as meta/throttle,
+    // naming this entry. meta/throttle can only move forward once every
+    // 30s, so the whole site accepts at most one public report per 30s
+    // (~2.9k/day), no matter how many scripts are spamming.
+    // ponytail: global limit, a spammer can crowd out real reports (not crash
+    // the site); switch to per-user limits with anonymous auth if that happens.
+    function throttled(entryId) {
+      let t = getAfter(/databases/$(database)/documents/meta/throttle).data;
+      return t.last == request.time && t.id == entryId;
+    }
+
+    match /entries/{id} {
+      allow get: if true; // duplicate check before submitting
+      // visitors only ever load verified entries, so pending spam costs them nothing
+      allow list: if isAdmin() || resource.data.verified == true;
+      allow create: if notProtected(request.resource.data)
+        && (isAdmin() || (validReport(request.resource.data) && throttled(id)));
+      allow update, delete: if isAdmin();
+    }
+
+    match /meta/throttle {
+      allow create: if request.resource.data.keys().hasOnly(['last', 'id'])
+        && request.resource.data.last == request.time;
+      allow update: if request.resource.data.keys().hasOnly(['last', 'id'])
+        && request.resource.data.last == request.time
+        && request.time > resource.data.last + duration.value(30, 's');
+    }
+
+    match /protected/{id} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /audit_log/{id} {
+      allow read: if isOwner();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+  }
+}
