@@ -651,6 +651,15 @@ const FIREBASE_CONFIG = {
 };
 
 /* ============================================================
+   APP CHECK (Fraud Defense / reCAPTCHA Enterprise site key,
+   public by design)
+   Proves Firestore requests come from this page, not a script.
+   Only blocks anything once "Enforce" is clicked in the
+   Firebase console -> App Check. The SECRET key never goes here.
+   ============================================================ */
+const RECAPTCHA_SITE_KEY = "6LcAie8tAAAAAGMmstnUjW4apxem6MluiniECkZr";
+
+/* ============================================================
    VALORANT RANK LOOKUP (optional)
    Unofficial third-party API (HenrikDev), not affiliated with
    Riot Games. Get a free "Basic" key at api.henrikdev.xyz/dashboard
@@ -696,7 +705,12 @@ if (FIREBASE_CONFIG) {
     const app = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js');
     const fs = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js');
     const authLib = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js');
+    const appCheckLib = await import('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js');
     const firebaseApp = app.initializeApp(FIREBASE_CONFIG);
+    appCheckLib.initializeAppCheck(firebaseApp, {
+      provider: new appCheckLib.ReCaptchaEnterpriseProvider(RECAPTCHA_SITE_KEY),
+      isTokenAutoRefreshEnabled: true,
+    });
     db = fs.getFirestore(firebaseApp);
     collection = fs.collection; addDoc = fs.addDoc; setDoc = fs.setDoc; getDoc = fs.getDoc; getDocs = fs.getDocs; onSnapshot = fs.onSnapshot;
     updateDoc = fs.updateDoc; deleteDoc = fs.deleteDoc; doc = fs.doc; query = fs.query; orderBy = fs.orderBy;
