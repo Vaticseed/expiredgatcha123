@@ -584,15 +584,15 @@
     <div class="grid2">
       <div>
         <label class="field-label">Username</label>
-        <input id="in-username" type="text" placeholder="PlayerName" dir="auto">
+        <input id="in-username" type="text" placeholder="PlayerName" dir="auto" maxlength="32">
       </div>
       <div>
         <label class="field-label">Tag</label>
-        <input id="in-tag" type="text" placeholder="1337" dir="auto">
+        <input id="in-tag" type="text" placeholder="1337" dir="auto" maxlength="10">
       </div>
     </div>
     <label class="field-label">Reason (optional)</label>
-    <textarea id="in-reason" placeholder="What happened? Be specific, this is what other players will see."></textarea>
+    <textarea id="in-reason" maxlength="1000" placeholder="What happened? Be specific, this is what other players will see."></textarea>
     <div style="height:10px;"></div>
     <div id="image-field-wrap">
       <label class="field-label">Screenshot (optional, max 5MB)</label>
@@ -687,7 +687,7 @@ const CLOUDINARY_CLOUD_NAME = "hmi1kjrf";
 const CLOUDINARY_UPLOAD_PRESET = "dodge-list";
 
 let useFirebase = false;
-let db, collection, addDoc, setDoc, getDoc, getDocs, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy;
+let db, collection, addDoc, setDoc, getDoc, getDocs, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy, where, limit, writeBatch, serverTimestamp;
 let auth, signInWithEmailAndPassword, signOut, onAuthStateChanged;
 let isAdmin = false;
 
@@ -700,6 +700,7 @@ if (FIREBASE_CONFIG) {
     db = fs.getFirestore(firebaseApp);
     collection = fs.collection; addDoc = fs.addDoc; setDoc = fs.setDoc; getDoc = fs.getDoc; getDocs = fs.getDocs; onSnapshot = fs.onSnapshot;
     updateDoc = fs.updateDoc; deleteDoc = fs.deleteDoc; doc = fs.doc; query = fs.query; orderBy = fs.orderBy;
+    where = fs.where; limit = fs.limit; writeBatch = fs.writeBatch; serverTimestamp = fs.serverTimestamp;
     auth = authLib.getAuth(firebaseApp);
     signInWithEmailAndPassword = authLib.signInWithEmailAndPassword;
     signOut = authLib.signOut;
@@ -708,6 +709,7 @@ if (FIREBASE_CONFIG) {
     onAuthStateChanged(auth, async (user) => {
       const claims = user ? (await user.getIdTokenResult(true)).claims : {};
       isAdmin = !!claims.admin;
+      subscribeEntries();
       document.getElementById('admin-login-fields').style.display = isAdmin ? 'none' : 'block';
       document.getElementById('admin-logged-in').style.display = isAdmin ? 'block' : 'none';
       document.getElementById('admin-btn-label').textContent = isAdmin ? 'Admin ✓' : 'Admin';
@@ -998,7 +1000,7 @@ function renderProtectedList(){
 class ProtectedAccountError extends Error {}
 
 async function logAction(action, entryData){
-  if (!useFirebase) return; // no meaningful log in local demo mode
+  if (!useFirebase || !isAdmin) return; // no meaningful log in local demo mode; only admins may write it
   try {
     const record = {
       action,
@@ -1030,7 +1032,15 @@ async function addEntry(entry){
     const ref = doc(db, 'entries', key);
     const existing = await getDoc(ref);
     if (existing.exists()) throw new DuplicateEntryError();
-    await setDoc(ref, entry);
+    if (isAdmin) {
+      await setDoc(ref, entry);
+    } else {
+      // rules only accept a public report alongside a meta/throttle bump (see firestore.rules)
+      const batch = writeBatch(db);
+      batch.set(ref, entry);
+      batch.set(doc(db, 'meta', 'throttle'), { last: serverTimestamp(), id: key });
+      await batch.commit();
+    }
     logAction('add', entry);
     return key;
   } else {
@@ -1171,12 +1181,19 @@ async function checkRank(id){
   }
 }
 
-if (useFirebase) {
-  const q = query(collection(db,'entries'), orderBy('createdAt','desc'));
-  onSnapshot(q, snap => {
+// Visitors only load verified entries (Firestore rules enforce this too),
+// so spam sitting in Pending never costs them reads. render() sorts.
+let unsubEntries = null;
+function subscribeEntries(){
+  if (unsubEntries) unsubEntries();
+  const q = isAdmin ? collection(db,'entries') : query(collection(db,'entries'), where('verified','==',true));
+  unsubEntries = onSnapshot(q, snap => {
     entries = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     render();
   });
+}
+
+if (useFirebase) {
   onSnapshot(collection(db, 'protected'), snap => {
     protectedAccounts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     renderProtectedList();
@@ -1334,6 +1351,8 @@ document.getElementById('submit-add').addEventListener('click', async ()=>{
       alert(`${username}#${tag} is already on the ${type === 'cheater' ? 'Cheaters' : 'Dodge'} list.`);
     } else if (e instanceof ProtectedAccountError) {
       alert(`${username}#${tag} can't be added to this list.`);
+    } else if (e.code === 'permission-denied' && !isAdmin) {
+      alert('Too many reports are coming in right now, please try again in a minute.');
     } else {
       alert('Could not submit: ' + e.message);
     }
@@ -1450,7 +1469,7 @@ async function loadAndRenderLogs(){
   el.innerHTML = `<p class="sub" style="margin:0;">Loading...</p>`;
   if (!useFirebase) { el.innerHTML = `<p class="sub" style="margin:0;">Not available in local mode.</p>`; return; }
   try {
-    const q = query(collection(db, 'audit_log'), orderBy('timestamp', 'desc'));
+    const q = query(collection(db, 'audit_log'), orderBy('timestamp', 'desc'), limit(200));
     const snap = await getDocs(q);
     logCache = {};
     const logs = snap.docs.map(d => { const o = { _id: d.id, ...d.data() }; logCache[d.id] = o; return o; });
