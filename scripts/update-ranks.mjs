@@ -1,6 +1,7 @@
 // Hourly rank updater + invalid-profile cleanup for the dodge-list.
 //
-// For every entry:
+// For every verified entry (pending reports get their rank on submit,
+// and skipping them stops spam from multiplying Firestore reads/writes):
 //   - looks up the current Valorant rank via the HenrikDev API
 //   - if the account genuinely doesn't exist (a real 404, not a
 //     rate limit / network blip / API downtime), it does NOT delete
@@ -81,7 +82,7 @@ async function fetchRank(username, tag) {
 }
 
 async function main() {
-  const snapshot = await db.collection('entries').get();
+  const snapshot = await db.collection('entries').where('verified', '==', true).get();
   const entries = snapshot.docs;
   console.log(`Found ${entries.length} entries. Updating ranks, ~${DELAY_MS}ms apart...${DRY_RUN ? ' (DRY RUN, no deletes)' : ''}`);
 

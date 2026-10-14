@@ -5,6 +5,9 @@ on:
       hours:
         description: 'Only delete pending entries from the last N hours (0 = all pending)'
         default: '0'
+      match:
+        description: 'Only delete pending entries whose username matches this (e.g. ^ExtremeUser_). Empty = all'
+        default: ''
       dry_run:
         description: 'Dry run: only list what would be deleted'
         type: boolean
@@ -23,4 +26,5 @@ jobs:
         env:
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
           HOURS: ${{ inputs.hours }}
+          MATCH: ${{ inputs.match }}
           DRY_RUN: ${{ inputs.dry_run }}
